@@ -1,13 +1,13 @@
 from setuptools import setup
 
-setup(name='2mpcf',
+setup(name='tpmcf',
       description='A package for computing and analyzing two-point and marked correlation functions.',
 	version='0.1',
 	author='Unnikrishnan Sureshkumar',
 	author_email='unnikrishnan.sureshkumar@wits.ac.za',
-	packages=['2mpcf'],
+	packages=['tpmcf'],
 	include_package_data=True,
-	package_data={'2mpcf': ['resources/*.ttf']},
+	package_data={'tpmcf': ['resources/*.ttf']},
 	install_requires=['numpy',
       			'matplotlib',
         		'scipy',
@@ -15,5 +15,5 @@ setup(name='2mpcf',
         		'treecorr',
         		'healpy',
     			],		
-	url='https://github.com/ukp1513/2mpcf',
+	url='https://github.com/ukp1513/tpmcf',
 )
