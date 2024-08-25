@@ -10,7 +10,7 @@ from random import sample
 import pandas as pd
 
 
-def makeJkSamples(real_table, rand_table, njacks_ra=1, njacks_dec=30, realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec'):
+def makeJkSamples(real_table, rand_table, njacks_ra, njacks_dec, realracol, realdeccol, randracol, randdeccol):
 
 	n_d = len(real_table)
 
@@ -45,7 +45,7 @@ def makeJkSamples(real_table, rand_table, njacks_ra=1, njacks_dec=30, realracol=
 	
 def giveJkSample(sample_nr, real_tab, rand_tab, njacks_ra=1, njacks_dec=30, realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec'):
 
-	jackknife_samples=makeJkSamples(real_tab, rand_tab, njacks_ra=1, njacks_dec=30, realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec')
+	jackknife_samples=makeJkSamples(real_tab, rand_tab, njacks_ra=njacks_ra, njacks_dec=njacks_dec, realracol=realracol,realdeccol=realdeccol,randracol=randracol, randdeccol=randdeccol)
 	
 	if 0 <= (sample_nr-1) < len(jackknife_samples):
         	return jackknife_samples[sample_nr-1]

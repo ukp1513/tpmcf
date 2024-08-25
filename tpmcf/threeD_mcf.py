@@ -47,7 +47,7 @@ def xiS(ra_real, dec_real, dist_real, ra_rand, dec_rand, dist_rand, s_min=5.0, s
 def weightedXiS(ra_real, dec_real, dist_real, weight_real, ra_rand, dec_rand, dist_rand, s_min=5.0, s_max=5000.0, bin_size=10.0, bin_type='Linear', ra_units='deg', dec_units='deg'):
 
 	# Create catalog for the data
-	cat_real = treecorr.Catalog(ra=ra_real, dec=dec_real, w=weighted_real, r=dist_real, ra_units=ra_units, dec_units=dec_units)
+	cat_real = treecorr.Catalog(ra=ra_real, dec=dec_real, w=weight_real, r=dist_real, ra_units=ra_units, dec_units=dec_units)
 	ww = treecorr.NNCorrelation(bin_type=bin_type, min_sep=s_min, max_sep=s_max, bin_size=bin_size)
 	ww.process(cat_real)
 
@@ -61,8 +61,8 @@ def weightedXiS(ra_real, dec_real, dist_real, weight_real, ra_rand, dec_rand, di
 	wr.process(cat_real, cat_rand)
 	
 	# Calculate 2pt correlation function of the total sample
-	weighted_xi, var_weightedxi = dd.calculateXi(rr=rr, dr=dr)
-	s = np.exp(dd.meanlogr)
+	weighted_xi, var_weightedxi = ww.calculateXi(rr=rr, dr=wr)
+	s = np.exp(ww.meanlogr)
 
 	return s, weighted_xi
 	
@@ -80,8 +80,8 @@ def computeCF(real_tab, real_properties, rand_tab, realracol, realdeccol, realzc
 	dec_rand = rand_tab[randdeccol]
 	z_rand = rand_tab[randzcol]
 	
-	dist_real = comoving_distance_H0(z_real, cosmology)
-	dist_rand = comoving_distance_H0(z_rand, cosmology)
+	dist_real = comovingDistanceH0(z_real, cosmology)
+	dist_rand = comovingDistanceH0(z_rand, cosmology)
 
 	s, xi = xiS(ra_real, dec_real, dist_real, ra_rand, dec_rand, dist_rand)
 	
@@ -105,7 +105,7 @@ def computeCF(real_tab, real_properties, rand_tab, realracol, realdeccol, realzc
 	return s_xi_mcfs
 	
 	
-def runComputation(real_tab, real_properties, rand_tab, njacks_ra, njacks_dec, working_dir=os.getcwd(), realracol='RA',realdeccol='DEC', realzcol='redshift', randracol='RA', randdeccol='Dec', randzcol='redshift', cosmology_H0_Om0=[70.0, 0.3]):
+def runComputation3D(real_tab, real_properties, rand_tab, njacks_ra, njacks_dec, working_dir=os.getcwd(), realracol='RA',realdeccol='DEC', realzcol='redshift', randracol='RA', randdeccol='Dec', randzcol='redshift', cosmology_H0_Om0=[70.0, 0.3]):
 
 	H0, Om0=cosmology_H0_Om0
 	cosmology = FlatLambdaCDM(H0=H0, Om0=Om0)
@@ -125,9 +125,11 @@ def runComputation(real_tab, real_properties, rand_tab, njacks_ra, njacks_dec, w
 		if(jk_i == 0):
 			real_tab_i, rand_tab_i = real_tab, rand_tab 
 			result_file = 'results/CFReal.txt'
+			print("Working on the real sample")
 		else:
 			real_tab_i, rand_tab_i = jkgen.giveJkSample(jk_i, real_tab, rand_tab, njacks_ra=njacks_ra, njacks_dec=njacks_dec, realracol=realracol, realdeccol=realdeccol, randracol=randracol, randdeccol=randdeccol)
 			result_file = 'results/jackknifes/CFJackknife_jk%d.txt' %jk_i
+			print("Working on the jackknife sample %d" %jk_i)
 			
 		result_i = computeCF(real_tab_i, real_properties, rand_tab_i, realracol, realdeccol, realzcol, randracol, randdeccol, randzcol, cosmology=cosmology)
 		
