@@ -26,9 +26,33 @@ def covmat_to_corrmat(covariance):
 	correlation = covariance / outer_v
 	correlation[covariance == 0] = 0
 	return correlation
-    
-def fitAngularCfMcf(real_tab, real_properties, sepmin, sepmax, sepmin_tofit, sepmax_tofit, to_svd_filter=0, to_hartlap_corr=0, fit_2pcf = 1, work_on_mcf = 1, dir_name=os.getcwd()):
+	
+def angularCF_model(theta, A, gam):
+	return A*pow(theta, 1-gam)
+	
+def redshift3dCF_model(s, s0, gam):
+	return pow((s/s0), (-1*gam))
 
+def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, real_properties, to_svd_filter=0, to_hartlap_corr=0, fit_2pcf = 1, work_on_mcf = 1, dir_name=os.getcwd(), plotxscale='log', plotyscale='log'):
+
+	if(stattype == 'angular'):
+
+		cfxlabel = r"$\theta \,\,\, (deg)$"
+		cfylabel = r"$\omega(\theta)$"
+		mcfxlabel = r"$\theta \,\,\, (deg)$"
+		mcfylabel = r"$M (\theta)$"
+		cffig_name = "fig_angularCF.png"
+		mcffig_name = "fig_angularMCF.png"
+
+	elif(stattype == '3d_redshift'):
+
+		cfxlabel = r"$s \,\,\, (Mpc/h)$"
+		cfylabel = r"$\xi(s)$"
+		mcfxlabel = r"$s \,\,\, (Mpc/h)$"
+		mcfylabel = r"$M (s)$"
+		cffig_name = "fig_3DRedshiftCF.png"
+		mcffig_name = "fig_3DRedshiftMCF.png"
+		
 	os.chdir(dir_name)
 
 	if(to_svd_filter == 0):
@@ -282,33 +306,42 @@ def fitAngularCfMcf(real_tab, real_properties, sepmin, sepmax, sepmin_tofit, sep
 		
 		# FIT USING CURVE_FIT
 
-		def angularCF_model(theta, A, gam):
-			return A*pow(theta, 1-gam)
+		if(stattype == 'angular'):
 			
-		popt, pcov = curve_fit(angularCF_model, sep_toFit, CF_toFit, p0=[5.0, 1.8], sigma=cov_mat_toFit)
-		A_curve, A_err_curve, gam_curve, gam_err_curve = popt[0],np.sqrt(pcov[0,0]),popt[1],np.sqrt(pcov[1,1])
-		print('Curve fitting parameters:\nA = %0.2lf +/- %0.2lf\ngamma = %0.2lf +/- %0.2lf\n' %(A_curve, A_err_curve, gam_curve, gam_err_curve))
+			popt, pcov = curve_fit(angularCF_model, sep_toFit, CF_toFit, sigma=cov_mat_toFit)
+			A_curve, A_err_curve, gam_curve, gam_err_curve = popt[0],np.sqrt(pcov[0,0]),popt[1],np.sqrt(pcov[1,1])
+			print('Curve fitting parameters:\nA = %0.2lf +/- %0.2lf\ngamma = %0.2lf +/- %0.2lf\n' %(A_curve, A_err_curve, gam_curve, gam_err_curve))
+			best_fit_model_curve=angularCF_model(sep_toFit, A_curve, gam_curve)
+			plt.errorbar(sep_toFit, CF_toFit, CF_err_toFit,ls='none',capsize=5,ms=10,marker='o',mew=1.0,mec='black',mfc='black',ecolor='black',elinewidth=1)
+			label = r"$\omega(\theta)=A \theta^{1-\gamma}$" + "\n" + r"$A = %0.2f \pm %0.2f$" + "\n" + r"$\gamma = %0.2f \pm %0.2f$"
+			plt.plot(sep_toPlot, angularCF_model(sep_toPlot, A_curve, gam_curve), color='red',label=label %(A_curve, A_err_curve, gam_curve, gam_err_curve))
+			
+			# WRITING TO FILES
 
-		best_fit_model_curve=angularCF_model(sep_toFit, A_curve, gam_curve)
-
-		plt.errorbar(sep_toFit, CF_toFit, CF_err_toFit,ls='none',capsize=5,ms=10,marker='o',mew=1.0,mec='black',mfc='black',ecolor='black',elinewidth=1)
+			np.savetxt('finals/CF_fit_params.txt', [A_curve, A_err_curve, gam_curve, gam_err_curve], fmt='%f', delimiter='\n')
+			
+		elif(stattype == '3d_redshift'):
 		
-		label = r"$\omega(\theta)=A \theta^{1-\gamma}$" + "\n" + r"$A = %0.2f \pm %0.2f$" + "\n" + r"$\gamma = %0.2f \pm %0.2f$"
-		
-		plt.plot(sep_toPlot, angularCF_model(sep_toPlot, A_curve, gam_curve), color='red',label=label %(A_curve, A_err_curve, gam_curve, gam_err_curve))
+			popt, pcov = curve_fit(redshift3dCF_model, sep_toFit, CF_toFit, sigma=cov_mat_toFit)
+			s0_curve, s0_err_curve, gam_curve, gam_err_curve = popt[0],np.sqrt(pcov[0,0]),popt[1],np.sqrt(pcov[1,1])
+			print('Curve fitting parameters:\ns0 = %0.2lf +/- %0.2lf\ngamma = %0.2lf +/- %0.2lf\n' %(s0_curve, s0_err_curve, gam_curve, gam_err_curve))
+			best_fit_model_curve=redshift3dCF_model(sep_toFit, s0_curve, gam_curve)
+			plt.errorbar(sep_toFit, CF_toFit, CF_err_toFit,ls='none',capsize=5,ms=10,marker='o',mew=1.0,mec='black',mfc='black',ecolor='black',elinewidth=1)
+			label = r"$\xi(s)=(s/s_0) \theta^{-\gamma}$" + "\n" + r"$s_0 = %0.2f \pm %0.2f$" + "\n" + r"$\gamma = %0.2f \pm %0.2f$"
+			plt.plot(sep_toPlot, redshift3dCF_model(sep_toPlot, s0_curve, gam_curve), color='red',label=label %(s0_curve, s0_err_curve, gam_curve, gam_err_curve))
 
 		
-		# WRITING TO FILES
+			# WRITING TO FILES
 
-		np.savetxt('finals/CF_fit_params.txt', [A_curve, A_err_curve, gam_curve, gam_err_curve], fmt='%f', delimiter='\n')
+			np.savetxt('finals/CF_fit_params.txt', [s0_curve, s0_err_curve, gam_curve, gam_err_curve], fmt='%f', delimiter='\n')
 
 
-	plt.xscale('log')
-	plt.yscale('log')
-	plt.xlabel(r"$\theta \,\,\, (deg)$",labelpad=10, fontproperties=prop_big)
-	plt.ylabel(r"$\omega(\theta)$",labelpad=0.5, fontproperties=prop_big)
+	plt.xscale(plotxscale)
+	plt.yscale(plotyscale)
+	plt.xlabel(cfxlabel,labelpad=10, fontproperties=prop_big)
+	plt.ylabel(cfylabel,labelpad=0.5, fontproperties=prop_big)
 	plt.legend(prop=prop)
-	plt.savefig("fig_angularCF.png" , dpi=300, bbox_inches = 'tight')
+	plt.savefig(cffig_name , dpi=300, bbox_inches = 'tight')
 	plt.close()
 
 		
@@ -346,16 +379,17 @@ def fitAngularCfMcf(real_tab, real_properties, sepmin, sepmax, sepmin_tofit, sep
 			
 			ax_now.axhline(y=1, color='black', linestyle='dashed')
 
-		plt.xscale('log')
-		plt.xlabel(r"$\theta \,\,\, (deg)$",labelpad=10, fontproperties=prop_big)
-		plt.ylabel(r"$M(\theta)$",labelpad=0.5, fontproperties=prop_big)
+		plt.xscale(plotxscale)
+		plt.xlabel(mcfxlabel,labelpad=10, fontproperties=prop_big)
+		plt.ylabel(mcfylabel,labelpad=0.5, fontproperties=prop_big)
 		plt.legend(numpoints=1,frameon=False,loc=0,prop=prop_tiny)
 			
 		plt.grid(False)
 		plt.subplots_adjust(hspace=0.0,wspace=0.2)
-		plt.savefig("fig_markedCF.png", dpi=300, bbox_inches = 'tight')
+		plt.savefig(mcffig_name, dpi=300, bbox_inches = 'tight')
 		plt.close()
+		
+		return None
 		
 	
 
-	

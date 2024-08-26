@@ -11,6 +11,7 @@ from astropy.io import fits
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 import os
+import shutil
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
@@ -22,7 +23,7 @@ def comovingDistanceH0(redshift, cosmology):
 	comDist = cosmology.comoving_distance(redshift)*cosmology.H0/100.
 	return comDist
 	
-def xiS(ra_real, dec_real, dist_real, ra_rand, dec_rand, dist_rand, s_min=5.0, s_max=5000.0, bin_size=10.0, bin_type='Linear', ra_units='deg', dec_units='deg'):
+def xiS(ra_real, dec_real, dist_real, ra_rand, dec_rand, dist_rand, s_min, s_max, bin_size, bin_type, ra_units, dec_units):
 
 	# Create catalog for the data
 	cat_real = treecorr.Catalog(ra=ra_real, dec=dec_real, r=dist_real, ra_units=ra_units, dec_units=dec_units)
@@ -44,7 +45,7 @@ def xiS(ra_real, dec_real, dist_real, ra_rand, dec_rand, dist_rand, s_min=5.0, s
 
 	return s, xi
 	
-def weightedXiS(ra_real, dec_real, dist_real, weight_real, ra_rand, dec_rand, dist_rand, s_min=5.0, s_max=5000.0, bin_size=10.0, bin_type='Linear', ra_units='deg', dec_units='deg'):
+def weightedXiS(ra_real, dec_real, dist_real, weight_real, ra_rand, dec_rand, dist_rand, s_min, s_max, bin_size, bin_type, ra_units, dec_units):
 
 	# Create catalog for the data
 	cat_real = treecorr.Catalog(ra=ra_real, dec=dec_real, w=weight_real, r=dist_real, ra_units=ra_units, dec_units=dec_units)
@@ -70,7 +71,7 @@ def mcfS(s, xi_s, weighted_xi_s):
 	M_s = (1 + weighted_xi_s)/(1 + xi_s)
 	return M_s
 	
-def computeCF(real_tab, real_properties, rand_tab, realracol, realdeccol, realzcol, randracol, randdeccol, randzcol, cosmology):
+def computeCF(real_tab, real_properties, rand_tab, s_min, s_max, bin_size, bin_type, ranked, ra_units, dec_units, realracol, realdeccol, realzcol, randracol, randdeccol, randzcol, cosmology):
 
 	ra_real = real_tab[realracol]
 	dec_real = real_tab[realdeccol]
@@ -83,7 +84,7 @@ def computeCF(real_tab, real_properties, rand_tab, realracol, realdeccol, realzc
 	dist_real = comovingDistanceH0(z_real, cosmology)
 	dist_rand = comovingDistanceH0(z_rand, cosmology)
 
-	s, xi = xiS(ra_real, dec_real, dist_real, ra_rand, dec_rand, dist_rand)
+	s, xi = xiS(ra_real, dec_real, dist_real, ra_rand, dec_rand, dist_rand, s_min, s_max, bin_size, bin_type, ra_units, dec_units)
 	
 	s_xi_mcfs = np.empty((len(s), 0))
 	
@@ -93,26 +94,39 @@ def computeCF(real_tab, real_properties, rand_tab, realracol, realdeccol, realzc
 	for prop_i in real_properties:
 	
 		prop_now = np.array(real_tab[prop_i])
-		
-		prop_now_ranked = rankdata(prop_now)
 	
-		s, weighted_xi_ranked = weightedXiS(ra_real, dec_real, dist_real, prop_now_ranked, ra_rand, dec_rand, dist_rand)
+		if(ranked == True):
+			prop_now_ranked = rankdata(prop_now)
+			weight_real = prop_now_ranked
+		else:
+			weight_real = prop_now
+			
+		s, weighted_xi_ranked = weightedXiS(ra_real, dec_real, dist_real, weight_real, ra_rand, dec_rand, dist_rand, s_min, s_max, bin_size, bin_type, ra_units, dec_units)
 
 		M_s = np.array(mcfS(s, xi, weighted_xi_ranked)).reshape(len(s), 1)
 				
 		s_xi_mcfs = np.hstack((s_xi_mcfs, M_s))
 		
+		
 	return s_xi_mcfs
 	
 	
-def runComputation3D(real_tab, real_properties, rand_tab, njacks_ra, njacks_dec, working_dir=os.getcwd(), realracol='RA',realdeccol='DEC', realzcol='redshift', randracol='RA', randdeccol='Dec', randzcol='redshift', cosmology_H0_Om0=[70.0, 0.3]):
+def runComputation3D(real_tab, real_properties, rand_tab, njacks_ra, njacks_dec, working_dir=os.getcwd(), s_min=5.0, s_max=5000.0, bin_size=0.5, bin_type='Log', ranked=True, ra_units='deg', dec_units='deg', realracol='RA',realdeccol='DEC', realzcol='redshift', randracol='RA', randdeccol='Dec', randzcol='redshift', cosmology_H0_Om0=[70.0, 0.3]):
 
 	H0, Om0=cosmology_H0_Om0
 	cosmology = FlatLambdaCDM(H0=H0, Om0=Om0)
-
+	
 	os.chdir(working_dir)
+	if(os.path.exists('biproducts')):
+		shutil.rmtree('biproducts')
 	os.mkdir('biproducts')
+	
+	if(os.path.exists('results')):
+		shutil.rmtree('results')
 	os.mkdir('results')
+	
+	if(os.path.exists('results/jackknifes')):
+		shutil.rmtree('results/jackknifes')
 	os.mkdir('results/jackknifes')
 	
 	global realGal, randGal
@@ -131,55 +145,9 @@ def runComputation3D(real_tab, real_properties, rand_tab, njacks_ra, njacks_dec,
 			result_file = 'results/jackknifes/CFJackknife_jk%d.txt' %jk_i
 			print("Working on the jackknife sample %d" %jk_i)
 			
-		result_i = computeCF(real_tab_i, real_properties, rand_tab_i, realracol, realdeccol, realzcol, randracol, randdeccol, randzcol, cosmology=cosmology)
+		result_i = computeCF(real_tab_i, real_properties, rand_tab_i, s_min, s_max, bin_size, bin_type, ranked, ra_units, dec_units, realracol, realdeccol, realzcol, randracol, randdeccol, randzcol, cosmology=cosmology)
 		
 		np.savetxt(result_file, result_i, delimiter="\t",fmt='%f')
 	
-	'''
-	
-	with ProcessPoolExecutor() as executor:
-		futures = []
-		for i in range(n_jacks + 1):
-			result_file = 'results/CFReal.txt' if i == 0 else f'results/jackknifes/CFJackknife_jk{i}.txt'
-
-			# Parallelize the computation directly in the loop
-			futures.append(executor.submit(computeCF, real_tab, real_properties, rand_tab, realracol, realdeccol, randracol, randdeccol))
-	
-	for future, i in zip(as_completed(futures), range(n_jacks + 1)):
-		try:
-			result_i = future.result()  # Get the computed result
-			result_file = 'results/CFReal.txt' if i == 0 else f'results/jackknifes/CFJackknife_jk{i}.txt'
-			np.savetxt(result_file, result_i, delimiter="\t", fmt='%f')  # Save result
-		except Exception as exc:
-			print(f"Sample computation generated an exception: {exc}")
-	'''
 	return None
-
-	##################
-	'''
-	
-	for i in range(n_jacks+1):
-		if(i == 0):
-			result_file = 'results/CFReal.txt'
-		else:
-			result_file = 'results/jackknifes/CFJackknife_jk%d.txt' %i
-			
-		result_i = computeSample(i)
-		np.savetxt(result_file, result_i, delimiter="\t",fmt='%f')
-	
-	
-	# Use ProcessPoolExecutor for parallel computation
-	with ProcessPoolExecutor() as executor:
-		futures = [executor.submit(compute_sample, i) for i in range(n_jacks + 1)]
-
-	# Optionally, wait for all tasks to complete and handle any errors
-	for future in as_completed(futures):
-		try:
-			future.result()
-		except Exception as exc:
-			print(f"Sample computation generated an exception: {exc}")
-	
-
-	'''
-	
 
