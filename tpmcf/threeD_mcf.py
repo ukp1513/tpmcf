@@ -134,7 +134,7 @@ def runComputation3D(real_tab, real_properties, rand_tab, njacks_ra, njacks_dec,
 	randGal = rand_tab
 	
 	n_jacks = njacks_ra * njacks_dec
-	
+	print('Nr. of jackknifes: ', n_jacks)
 	for jk_i in range(n_jacks+1):
 		if(jk_i == 0):
 			real_tab_i, rand_tab_i = real_tab, rand_tab 
