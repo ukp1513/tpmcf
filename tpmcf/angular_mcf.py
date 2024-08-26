@@ -14,15 +14,9 @@ import os
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-import jkgen
+from . import jkgen
 
-H0, Om0=70.0, 0.3
-cosmo = FlatLambdaCDM(H0=H0, Om0=Om0)
 
-def comovingDistanceH0(redshift, cosmology=cosmo):
-	comDist = cosmology.comoving_distance(redshift)*cosmology.H0/100.
-	return comDist
-	
 def omegaTheta(ra_real, dec_real, ra_rand, dec_rand, th_min=0.001, th_max=50.0, bin_size=0.5, ra_units='deg', dec_units='deg', sep_units='degrees'):
 
 	# Create catalog for the data
@@ -102,7 +96,7 @@ def computeCF(real_tab, real_properties, rand_tab, realracol='RA',realdeccol='DE
 	return th_omega_mcfs
 	
 	
-def runComputation(real_tab, real_properties, rand_tab, njacks_ra, njacks_dec, working_dir=os.getcwd(), realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec'):
+def runComputationAngular(real_tab, real_properties, rand_tab, njacks_ra, njacks_dec, working_dir=os.getcwd(), realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec'):
 
 	os.chdir(working_dir)
 	os.mkdir('biproducts')
@@ -119,9 +113,11 @@ def runComputation(real_tab, real_properties, rand_tab, njacks_ra, njacks_dec, w
 		if(jk_i == 0):
 			real_tab_i, rand_tab_i = real_tab, rand_tab 
 			result_file = 'results/CFReal.txt'
+			print("Working on the real sample")
 		else:
 			real_tab_i, rand_tab_i = jkgen.giveJkSample(jk_i, real_tab, rand_tab, njacks_ra=njacks_ra, njacks_dec=njacks_dec, realracol=realracol, realdeccol=realdeccol, randracol=randracol, randdeccol=randdeccol)
 			result_file = 'results/jackknifes/CFJackknife_jk%d.txt' %jk_i
+			print("Working on the jackknife sample %d" %jk_i)
 			
 		result_i = computeCF(real_tab_i, real_properties, rand_tab_i, realracol, realdeccol, randracol, randdeccol)
 		
