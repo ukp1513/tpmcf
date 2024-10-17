@@ -66,7 +66,7 @@ def mcfTheta(th, omega_th, weighted_omega_th):
 	M_th = (1 + weighted_omega_th)/(1 + omega_th)
 	return M_th
 	
-def computeCF(real_tab, real_properties, rand_tab, realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec'):
+def computeCF(real_tab, real_properties, rand_tab, thmin, thmax, th_bin_size, realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec'):
 
 	ra_real = real_tab[realracol]
 	dec_real = real_tab[realdeccol]
@@ -74,7 +74,7 @@ def computeCF(real_tab, real_properties, rand_tab, realracol='RA',realdeccol='DE
 	ra_rand = rand_tab[randracol]
 	dec_rand = rand_tab[randdeccol]
 
-	th, omega = omegaTheta(ra_real, dec_real, ra_rand, dec_rand)
+	th, omega = omegaTheta(ra_real, dec_real, ra_rand, dec_rand, th_min=thmin, th_max=thmax, bin_size=th_bin_size)
 	
 	th_omega_mcfs = np.empty((len(th), 0))
 	
@@ -87,7 +87,7 @@ def computeCF(real_tab, real_properties, rand_tab, realracol='RA',realdeccol='DE
 		
 		prop_now_ranked = rankdata(prop_now)
 	
-		th, weighted_omega_ranked = weightedOmegaTheta(ra_real, dec_real, prop_now_ranked, ra_rand, dec_rand)
+		th, weighted_omega_ranked = weightedOmegaTheta(ra_real, dec_real, prop_now_ranked, ra_rand, dec_rand, th_min=thmin, th_max=thmax, bin_size=th_bin_size)
 
 		M_theta = np.array(mcfTheta(th, omega, weighted_omega_ranked)).reshape(len(th), 1)
 				
@@ -96,7 +96,7 @@ def computeCF(real_tab, real_properties, rand_tab, realracol='RA',realdeccol='DE
 	return th_omega_mcfs
 	
 	
-def runComputationAngular(real_tab, real_properties, rand_tab, njacks_ra, njacks_dec, working_dir=os.getcwd(), realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec'):
+def runComputationAngular(real_tab, real_properties, rand_tab, thmin, thmax, th_bin_size, njacks_ra, njacks_dec, working_dir=os.getcwd(), realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec'):
 
 	os.chdir(working_dir)
 	os.mkdir('biproducts')
@@ -123,51 +123,6 @@ def runComputationAngular(real_tab, real_properties, rand_tab, njacks_ra, njacks
 		
 		np.savetxt(result_file, result_i, delimiter="\t",fmt='%f')
 	
-	'''
-	
-	with ProcessPoolExecutor() as executor:
-		futures = []
-		for i in range(n_jacks + 1):
-			result_file = 'results/CFReal.txt' if i == 0 else f'results/jackknifes/CFJackknife_jk{i}.txt'
-
-			# Parallelize the computation directly in the loop
-			futures.append(executor.submit(computeCF, real_tab, real_properties, rand_tab, realracol, realdeccol, randracol, randdeccol))
-	
-	for future, i in zip(as_completed(futures), range(n_jacks + 1)):
-		try:
-			result_i = future.result()  # Get the computed result
-			result_file = 'results/CFReal.txt' if i == 0 else f'results/jackknifes/CFJackknife_jk{i}.txt'
-			np.savetxt(result_file, result_i, delimiter="\t", fmt='%f')  # Save result
-		except Exception as exc:
-			print(f"Sample computation generated an exception: {exc}")
-	'''
-	return None
-
-	##################
-	'''
-	
-	for i in range(n_jacks+1):
-		if(i == 0):
-			result_file = 'results/CFReal.txt'
-		else:
-			result_file = 'results/jackknifes/CFJackknife_jk%d.txt' %i
-			
-		result_i = computeSample(i)
-		np.savetxt(result_file, result_i, delimiter="\t",fmt='%f')
-	
-	
-	# Use ProcessPoolExecutor for parallel computation
-	with ProcessPoolExecutor() as executor:
-		futures = [executor.submit(compute_sample, i) for i in range(n_jacks + 1)]
-
-	# Optionally, wait for all tasks to complete and handle any errors
-	for future in as_completed(futures):
-		try:
-			future.result()
-		except Exception as exc:
-			print(f"Sample computation generated an exception: {exc}")
-	
-
-	'''
+	return 0
 	
 
