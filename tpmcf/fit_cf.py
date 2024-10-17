@@ -21,8 +21,6 @@ elif(os.environ['THIS_PLATFORM'] == 'plgrid'):
 else:
         print("Platform not found! Exiting...")
         exit(0)
-
-#path = "/home/krishna/Dropbox/fonts/cmunss.ttf"
 	
 prop = fm.FontProperties(fname=fpath,size=12,math_fontfamily='stixsans')
 prop_big = fm.FontProperties(fname=fpath,size=14,math_fontfamily='stixsans')
