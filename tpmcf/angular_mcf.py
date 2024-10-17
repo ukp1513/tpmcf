@@ -119,7 +119,7 @@ def runComputationAngular(real_tab, real_properties, rand_tab, thmin, thmax, th_
 			result_file = 'results/jackknifes/CFJackknife_jk%d.txt' %jk_i
 			print("Working on the jackknife sample %d" %jk_i)
 			
-		result_i = computeCF(real_tab_i, real_properties, rand_tab_i, realracol, realdeccol, randracol, randdeccol)
+		result_i = computeCF(real_tab_i, real_properties, rand_tab_i, thmin, thmax, th_bin_size, realracol, realdeccol, randracol, randdeccol)
 		
 		np.savetxt(result_file, result_i, delimiter="\t",fmt='%f')
 	
