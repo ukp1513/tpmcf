@@ -1,0 +1,16 @@
+LICENSE
+README.md
+setup.py
+tpmcf/__init__.py
+tpmcf/angular_mcf.py
+tpmcf/fit_cf.py
+tpmcf/jkgen.py
+tpmcf/threeD_mcf.py
+tpmcf.egg-info/PKG-INFO
+tpmcf.egg-info/SOURCES.txt
+tpmcf.egg-info/dependency_links.txt
+tpmcf.egg-info/requires.txt
+tpmcf.egg-info/top_level.txt
+tpmcf/resources/Cabin-Regular.ttf
+tpmcf/resources/UbuntuMono-R.ttf
+tpmcf/resources/cmunss.ttf

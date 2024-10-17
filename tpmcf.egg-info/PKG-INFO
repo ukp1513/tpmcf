@@ -1,0 +1,14 @@
+Metadata-Version: 2.1
+Name: tpmcf
+Version: 0.1
+Summary: A package for computing and analyzing two-point and marked correlation functions.
+Home-page: https://github.com/ukp1513/tpmcf
+Author: Unnikrishnan Sureshkumar
+Author-email: unnikrishnan.sureshkumar@wits.ac.za
+License-File: LICENSE
+Requires-Dist: numpy
+Requires-Dist: matplotlib
+Requires-Dist: scipy
+Requires-Dist: astropy
+Requires-Dist: treecorr
+Requires-Dist: healpy
