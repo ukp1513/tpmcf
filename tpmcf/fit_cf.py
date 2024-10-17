@@ -33,7 +33,7 @@ def angularCF_model(theta, A, gam):
 def redshift3dCF_model(s, s0, gam):
 	return pow((s/s0), (-1*gam))
 
-def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, real_properties, to_svd_filter=0, to_hartlap_corr=0, fit_2pcf = 1, work_on_mcf = 1, dir_name=os.getcwd(), plotxscale='log', plotyscale='log'):
+def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, real_properties, to_svd_filter=0, to_hartlap_corr=0, fit_2pcf = 1, work_on_mcf = 1, dir_name=os.getcwd(), plotxscale='log', plotyscale='log', ignore_negatives = True):
 
 	if(stattype == 'angular'):
 
@@ -150,12 +150,20 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, rea
 
 	filter_index_CF = []
 	for i in range(0,nrows):
-		if(np.isnan(CFRealAll[i,1]).any() == True or np.isinf(CFRealAll[i,1]).any() == True or CFRealAll[i,1]<0.):
-			filter_index_CF.append(i)
-		else: 
-			for j in range(ncols):
-				if(np.isnan(CFRealAll[i,j]).any() == True or np.isinf(CFRealAll[i,j]).any() == True):
-					filter_index_CF.append(i)
+		if(ignore_negatives == True):
+			if(np.isnan(CFRealAll[i,1]).any() == True or np.isinf(CFRealAll[i,1]).any() == True or CFRealAll[i,1]<0.):
+				filter_index_CF.append(i)
+			else: 
+				for j in range(ncols):
+					if(np.isnan(CFRealAll[i,j]).any() == True or np.isinf(CFRealAll[i,j]).any() == True):
+						filter_index_CF.append(i)
+		else:
+			if(np.isnan(CFRealAll[i,1]).any() == True or np.isinf(CFRealAll[i,1]).any() == True):
+				filter_index_CF.append(i)
+			else: 
+				for j in range(ncols):
+					if(np.isnan(CFRealAll[i,j]).any() == True or np.isinf(CFRealAll[i,j]).any() == True):
+						filter_index_CF.append(i)
 		if(CFRealAll[i,0] < sepmin or CFRealAll[i,0] > sepmax):
 			filter_index_CF.append(i)
 
