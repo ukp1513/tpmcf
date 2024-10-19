@@ -10,17 +10,21 @@ from matplotlib import font_manager as fm, rcParams
 import socket
 
 if(os.environ['THIS_PLATFORM'] == 'hp455'):
-        fpath = "/home/krishna/Dropbox/fonts/cmunss.ttf"
-        source_dir = '/home/krishna/krishna_work/DES_MCF'
+	fpath = "/home/krishna/Dropbox/fonts/cmunss.ttf"
+	source_dir = '/home/krishna/krishna_work/DES_MCF'
 elif(os.environ['THIS_PLATFORM'] == 'hippo'):
-        fpath = "/home/ukp1513/fonts/cmunss.ttf"
-        source_dir = "/data/ukp1513/des_mcf/"
+	fpath = "/home/ukp1513/fonts/cmunss.ttf"
+	source_dir = "/data/ukp1513/des_mcf/"
 elif(os.environ['THIS_PLATFORM'] == 'plgrid'):
-        fpath = '/net/people/plgrid/plgukp1513/fonts/cmunss.ttf'
-        source_dir = '/net/ascratch/people/plgukp1513/des_mcf/data'
+	fpath = '/net/people/plgrid/plgukp1513/fonts/cmunss.ttf'
+	source_dir = '/net/ascratch/people/plgukp1513/des_mcf/data'
+elif(os.environ['THIS_PLATFORM'] == 'chpc'):
+	fpath = '/home/usureshkumar/fonts/cmunss.ttf'
+	source_dir = '/home/usureshkumar/lustre/des'
 else:
         print("Platform not found! Exiting...")
         exit(0)
+
 	
 prop = fm.FontProperties(fname=fpath,size=12,math_fontfamily='stixsans')
 prop_big = fm.FontProperties(fname=fpath,size=14,math_fontfamily='stixsans')
