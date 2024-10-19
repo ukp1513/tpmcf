@@ -119,12 +119,9 @@ def runComputationAngular(real_tab, real_properties, rand_tab, thmin, thmax, th_
 			real_tab_i, rand_tab_i = jkgen.giveJkSample(jk_i, real_tab, rand_tab, njacks_ra=njacks_ra, njacks_dec=njacks_dec, realracol=realracol, realdeccol=realdeccol, randracol=randracol, randdeccol=randdeccol)
 			result_file = 'results/jackknifes/CFJackknife_jk%d.txt' %jk_i
 			print("Working on the jackknife sample %d" %jk_i)
-			
-<<<<<<< HEAD
+		
 		result_i = computeCF(real_tab_i, real_properties, rand_tab_i, thmin, thmax, th_nbins, realracol, realdeccol, randracol, randdeccol)
-=======
-		result_i = computeCF(real_tab_i, real_properties, rand_tab_i, thmin, thmax, th_bin_size, realracol, realdeccol, randracol, randdeccol)
->>>>>>> 26261f51c0609575259e75210c5b5a7daa8b4e61
+
 		
 		np.savetxt(result_file, result_i, delimiter="\t",fmt='%f')
 		
