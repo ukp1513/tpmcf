@@ -15,6 +15,8 @@ from concurrent.futures import ProcessPoolExecutor
 
 from . import jkgen
 
+
+
 def omegaTheta(ra_real, dec_real, ra_rand, dec_rand, th_min=0.001, th_max=50.0, nbins=8, ra_units='deg', dec_units='deg', sep_units='degrees'):
 
 	# Create catalog for the data
@@ -109,6 +111,8 @@ def runComputationAngular(real_tab, real_properties, rand_tab, thmin, thmax, th_
 	
 	n_jacks = njacks_ra * njacks_dec
 	
+	jackknife_samples = jkgen.makeJkSamples(real_tab, rand_tab, njacks_ra, njacks_dec, realracol, realdeccol, randracol, randdeccol, plot=False)
+	
 	def process_jackknife(jk_i):
 		
 		if(jk_i == 0):
@@ -116,12 +120,11 @@ def runComputationAngular(real_tab, real_properties, rand_tab, thmin, thmax, th_
 			result_file = 'results/CFReal.txt'
 			print("Working on the real sample")
 		else:
-			real_tab_i, rand_tab_i = jkgen.giveJkSample(jk_i, real_tab, rand_tab, njacks_ra=njacks_ra, njacks_dec=njacks_dec, realracol=realracol, realdeccol=realdeccol, randracol=randracol, randdeccol=randdeccol)
+			real_tab_i, rand_tab_i = jackknife_samples[jk_i - 1]
 			result_file = 'results/jackknifes/CFJackknife_jk%d.txt' %jk_i
 			print("Working on the jackknife sample %d" %jk_i)
 		
 		result_i = computeCF(real_tab_i, real_properties, rand_tab_i, thmin, thmax, th_nbins, realracol, realdeccol, randracol, randdeccol)
-
 		
 		np.savetxt(result_file, result_i, delimiter="\t",fmt='%f')
 		
