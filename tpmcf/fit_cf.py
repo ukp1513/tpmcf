@@ -5,6 +5,7 @@ import os
 import shutil
 from scipy.optimize import curve_fit
 import bokeh.palettes as bp
+from . import integral_constrain
 
 from matplotlib import font_manager as fm, rcParams
 import socket
@@ -47,7 +48,7 @@ def angularCF_model(theta, A, gam):
 def redshift3dCF_model(s, s0, gam):
 	return pow((s/s0), (-1*gam))
 
-def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, real_properties, to_svd_filter=0, to_hartlap_corr=0, fit_2pcf = 1, work_on_mcf = 1, dir_name=os.getcwd(), plotxscale='log', plotyscale='log', ignore_negatives = True):
+def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, rand_tab, real_properties, to_svd_filter=0, to_hartlap_corr=0, fit_2pcf = 1, work_on_mcf = 1, dir_name=os.getcwd(), plotxscale='log', plotyscale='log', ignore_negatives = True, realracol='RA', realdeccol='DEC', randracol='RA', randdeccol='Dec', compute_IC = True):
 
 	if(stattype == 'angular'):
 
@@ -342,6 +343,13 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, rea
 
 			np.savetxt('finals/CF_fit_params.txt', [A_curve, A_err_curve, gam_curve, gam_err_curve], fmt='%f', delimiter='\n')
 			
+			if(compute_IC == True):
+				IC = integral_constrain.computeICAngular(randgalaxies=rand_tab, A=A_curve, gamma=gam_curve, randracol=randracol, randdeccol=randdeccol)
+				print("Integral Constrain = %f" %IC)
+				with open('finals/IC.txt', 'w') as file:
+					file.write(str(IC))
+				
+				
 		elif(stattype == '3d_redshift'):
 		
 			popt, pcov = curve_fit(redshift3dCF_model, sep_toFit, CF_toFit, sigma=cov_mat_toFit)
@@ -356,6 +364,9 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, rea
 			# WRITING TO FILES
 
 			np.savetxt('finals/CF_fit_params.txt', [s0_curve, s0_err_curve, gam_curve, gam_err_curve], fmt='%f', delimiter='\n')
+			
+			if(compute_IC == True):
+				print("IC Computation is not coded for 3d...") #TODO
 
 
 	plt.xscale(plotxscale)
