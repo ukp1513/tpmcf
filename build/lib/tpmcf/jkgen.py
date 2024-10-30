@@ -10,7 +10,7 @@ from random import sample
 import pandas as pd
 
 
-def makeJkSamples(real_table, rand_table, njacks_ra, njacks_dec, realracol, realdeccol, randracol, randdeccol):
+def makeJkSamples(real_table, rand_table, njacks_ra, njacks_dec, realracol, realdeccol, randracol, randdeccol, plot=False):
 
 	n_d = len(real_table)
 
@@ -37,7 +37,9 @@ def makeJkSamples(real_table, rand_table, njacks_ra, njacks_dec, realracol, real
 
 			real_jk= real_table[((real_table[realracol] <= raMinNow) | (real_table[realracol] >= raMaxNow)) | ((real_table[realdeccol] <= decMinNow) | (real_table[realdeccol] >= decMaxNow))]
 			rand_jk= rand_table[((rand_table[randracol] <= raMinNow) | (rand_table[randracol] >= raMaxNow)) | ((rand_table[randdeccol] <= decMinNow) | (rand_table[randdeccol] >= decMaxNow))]
-
+			if(plot):
+				plt.scatter(real_jk[realracol], real_jk[realdeccol], s=1, color='blue')
+				plt.show()
 
 			jackknife_samples.append((real_jk, rand_jk))
 	

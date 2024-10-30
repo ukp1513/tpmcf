@@ -4,6 +4,7 @@ setup.py
 tpmcf/__init__.py
 tpmcf/angular_mcf.py
 tpmcf/fit_cf.py
+tpmcf/integral_constrain.py
 tpmcf/jkgen.py
 tpmcf/threeD_mcf.py
 tpmcf.egg-info/PKG-INFO
