@@ -106,7 +106,7 @@ def runComputationAngular_cross(real_tab1, real_tab2, rand_tab1, rand_tab2, thmi
 	else:
 		for jk_i in range(n_jacks+1):
 			process_jackknife(jk_i)
-			print("ok ok")
+			print("ok ok double ok")
 	
 	return 0
 	
