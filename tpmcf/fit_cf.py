@@ -302,7 +302,11 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 
 			else:
 				neff=nbins_CF_tofit
-				inv_cov_mat = np.linalg.inv(cov_mat)
+				try:
+					inv_cov_mat = np.linalg.inv(cov_mat)
+				except np.linalg.LinAlgError:
+					print("\nIssue taking inverse of covariance matrix! Returning without fitting...")
+					return
 
 				if(to_hartlap_corr == 1):
 					hartlap_factor = (ncopies-nbins_CF_tofit-2)/(ncopies-1)
@@ -317,12 +321,17 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 				np.savetxt("biproducts/inv_corr_mat_SVD.txt",np.transpose(inv_corr_mat_SVD),delimiter="\t",fmt='%f')
 			else:
 				np.savetxt("biproducts/inv_cov_mat.txt",np.transpose(inv_cov_mat),delimiter="\t",fmt='%f')
+				np.savetxt("biproducts/cov_mat.txt",np.transpose(cov_mat),delimiter="\t",fmt='%f')
 
 
 		sep_toFit = np.loadtxt('results/CFRealAll_filtered_tofit.txt')[:,0]
 		CF_toFit = np.loadtxt('results/CFRealAll_filtered_tofit.txt')[:,1]
 		inv_cov_mat_toFit = inv_cov_mat
-		cov_mat_toFit = np.linalg.inv(inv_cov_mat_toFit)
+		try:
+			cov_mat_toFit = np.linalg.inv(inv_cov_mat_toFit)
+		except:
+			print("\nIssue taking inverse of covariance matrix! Returning without fitting...")
+			return
 		CF_err_toFit = np.sqrt(np.diag(cov_mat_toFit))
 
 		np.savetxt('finals/final_CF.txt', np.transpose([sep_toFit, CF_toFit, CF_err_toFit]), fmt='%f', delimiter='\t')
@@ -331,7 +340,11 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 
 		if(stattype == 'angular'):
 			
-			popt, pcov = curve_fit(angularCF_model, sep_toFit, CF_toFit, sigma=cov_mat_toFit)
+			try:
+				popt, pcov = curve_fit(angularCF_model, sep_toFit, CF_toFit, sigma=cov_mat_toFit)
+			except:
+				print("\nProblem fitting curve...")
+				return
 			A_curve, A_err_curve, gam_curve, gam_err_curve = popt[0],np.sqrt(pcov[0,0]),popt[1],np.sqrt(pcov[1,1])
 			print('Curve fitting parameters:\nA = %0.2lf +/- %0.2lf\ngamma = %0.2lf +/- %0.2lf\n' %(A_curve, A_err_curve, gam_curve, gam_err_curve))
 			best_fit_model_curve=angularCF_model(sep_toFit, A_curve, gam_curve)
@@ -352,7 +365,11 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 				
 		elif(stattype == '3d_redshift'):
 		
-			popt, pcov = curve_fit(redshift3dCF_model, sep_toFit, CF_toFit, sigma=cov_mat_toFit)
+			try:
+				popt, pcov = curve_fit(redshift3dCF_model, sep_toFit, CF_toFit, sigma=cov_mat_toFit)
+			except:
+				print("\nProblem fitting curve...")
+				return
 			s0_curve, s0_err_curve, gam_curve, gam_err_curve = popt[0],np.sqrt(pcov[0,0]),popt[1],np.sqrt(pcov[1,1])
 			print('Curve fitting parameters:\ns0 = %0.2lf +/- %0.2lf\ngamma = %0.2lf +/- %0.2lf\n' %(s0_curve, s0_err_curve, gam_curve, gam_err_curve))
 			best_fit_model_curve=redshift3dCF_model(sep_toFit, s0_curve, gam_curve)
@@ -422,7 +439,7 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 		plt.savefig(mcffig_name, dpi=300, bbox_inches = 'tight')
 		plt.close()
 		
-		return None
+	return None
 		
 	
 
