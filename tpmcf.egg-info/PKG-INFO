@@ -6,9 +6,3 @@ Home-page: https://github.com/ukp1513/tpmcf
 Author: Unnikrishnan Sureshkumar
 Author-email: unnikrishnan.sureshkumar@wits.ac.za
 License-File: LICENSE
-Requires-Dist: numpy
-Requires-Dist: matplotlib
-Requires-Dist: scipy
-Requires-Dist: astropy
-Requires-Dist: treecorr
-Requires-Dist: healpy

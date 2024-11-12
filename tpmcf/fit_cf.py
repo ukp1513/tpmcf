@@ -246,14 +246,15 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 
 	plt.errorbar(sep_toPlot, CF_toPlot, CF_err_toPlot,ls='none',capsize=5,ms=10,marker='o',mew=1.0,mec='black',mfc='white',ecolor='black',elinewidth=1)
 
-	final_path = 'finals'
+	#final_path = 'finals'
+	final_path = 'finals_%s_%s' %(str(sepmin_tofit).replace(".","p"),str(sepmax_tofit).replace(".","p"))
 	if not os.path.exists(final_path):
 	    os.makedirs(final_path)
 	else:
 	    shutil.rmtree(final_path)           # Removes all the subdirectories!
 	    os.makedirs(final_path)
 
-	np.savetxt('finals/final_CF_toPlot.txt', np.transpose([sep_toPlot, CF_toPlot, CF_err_toPlot]), fmt='%f', delimiter='\t')
+	np.savetxt(final_path+os.path.sep+'final_CF_toPlot.txt', np.transpose([sep_toPlot, CF_toPlot, CF_err_toPlot]), fmt='%f', delimiter='\t')
 
 
 	if(fit_2pcf == 1):
@@ -329,12 +330,12 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 		inv_cov_mat_toFit = inv_cov_mat
 		try:
 			cov_mat_toFit = np.linalg.inv(inv_cov_mat_toFit)
-		except:
+		except np.linalg.LinAlgError:
 			print("\nIssue taking inverse of covariance matrix! Returning without fitting...")
 			return
 		CF_err_toFit = np.sqrt(np.diag(cov_mat_toFit))
 
-		np.savetxt('finals/final_CF.txt', np.transpose([sep_toFit, CF_toFit, CF_err_toFit]), fmt='%f', delimiter='\t')
+		np.savetxt(final_path+os.path.sep+'final_CF.txt', np.transpose([sep_toFit, CF_toFit, CF_err_toFit]), fmt='%f', delimiter='\t')
 		
 		# FIT USING CURVE_FIT
 
@@ -342,8 +343,13 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 			
 			try:
 				popt, pcov = curve_fit(angularCF_model, sep_toFit, CF_toFit, sigma=cov_mat_toFit)
-			except:
-				print("\nProblem fitting curve...")
+			except RuntimeError as e:
+				print("\nProblem fitting curve: RuntimeError")
+				print(f"Error message: {e}")
+				return
+			except Exception as e:
+				print("\nProblem fitting curve: General Exception")
+				print(f"Error message: {e}")
 				return
 			A_curve, A_err_curve, gam_curve, gam_err_curve = popt[0],np.sqrt(pcov[0,0]),popt[1],np.sqrt(pcov[1,1])
 			print('Curve fitting parameters:\nA = %0.2lf +/- %0.2lf\ngamma = %0.2lf +/- %0.2lf\n' %(A_curve, A_err_curve, gam_curve, gam_err_curve))
@@ -354,12 +360,14 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 			
 			# WRITING TO FILES
 
-			np.savetxt('finals/CF_fit_params.txt', [A_curve, A_err_curve, gam_curve, gam_err_curve], fmt='%f', delimiter='\n')
+			np.savetxt(final_path+os.path.sep+'CF_fit_params.txt', [A_curve, A_err_curve, gam_curve, gam_err_curve], fmt='%f', delimiter='\n')
+			np.savetxt(final_path+os.path.sep+'sepFitRange.txt', [sepmin_tofit, sepmax_tofit], fmt='%f', delimiter='\n')
+			
 			
 			if(compute_IC == True):
 				IC = integral_constrain.computeICAngular(randgalaxies=rand_tab, A=A_curve, gamma=gam_curve, randracol=randracol, randdeccol=randdeccol)
 				print("Integral Constrain = %f" %IC)
-				with open('finals/IC.txt', 'w') as file:
+				with open(final_path+os.path.sep+'IC.txt', 'w') as file:
 					file.write(str(IC))
 				
 				
@@ -367,8 +375,13 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 		
 			try:
 				popt, pcov = curve_fit(redshift3dCF_model, sep_toFit, CF_toFit, sigma=cov_mat_toFit)
-			except:
-				print("\nProblem fitting curve...")
+			except RuntimeError as e:
+				print("\nProblem fitting curve: RuntimeError")
+				print(f"Error message: {e}")
+				return
+			except Exception as e:
+				print("\nProblem fitting curve: General Exception")
+				print(f"Error message: {e}")
 				return
 			s0_curve, s0_err_curve, gam_curve, gam_err_curve = popt[0],np.sqrt(pcov[0,0]),popt[1],np.sqrt(pcov[1,1])
 			print('Curve fitting parameters:\ns0 = %0.2lf +/- %0.2lf\ngamma = %0.2lf +/- %0.2lf\n' %(s0_curve, s0_err_curve, gam_curve, gam_err_curve))
@@ -380,7 +393,9 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 		
 			# WRITING TO FILES
 
-			np.savetxt('finals/CF_fit_params.txt', [s0_curve, s0_err_curve, gam_curve, gam_err_curve], fmt='%f', delimiter='\n')
+			np.savetxt(final_path+os.path.sep+'CF_fit_params.txt', [s0_curve, s0_err_curve, gam_curve, gam_err_curve], fmt='%f', delimiter='\n')
+			np.savetxt(final_path+os.path.sep+'sepFitRange.txt', [sepmin_tofit, sepmax_tofit], fmt='%f', delimiter='\n')
+			
 			
 			if(compute_IC == True):
 				print("IC Computation is not coded for 3d...") #TODO
@@ -423,7 +438,7 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 			
 			mcf_err = np.std(allCopiesMcfs, axis=1)
 			
-			np.savetxt('finals/final_mcf_%s.txt' %mark, np.transpose([sep_mcf, mcf, mcf_err]), fmt='%f', delimiter='\t')
+			np.savetxt(final_path+os.path.sep+'final_mcf_%s.txt' %mark, np.transpose([sep_mcf, mcf, mcf_err]), fmt='%f', delimiter='\t')
 			
 			ax_now.errorbar(sep_mcf,mcf,mcf_err,color=colors[mark_i],capsize=3,ms=6,marker=markers[mark_i],mew=1.0,mec=colors[mark_i],mfc=colors[mark_i],ecolor=colors[mark_i],elinewidth=1,lw=1.0,label="%s" %(marks[mark_i]))
 			

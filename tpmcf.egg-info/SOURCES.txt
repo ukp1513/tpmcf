@@ -2,7 +2,9 @@ LICENSE
 README.md
 setup.py
 tpmcf/__init__.py
+tpmcf/angular_crosscf.py
 tpmcf/angular_mcf.py
+tpmcf/angular_mcf_jk.py
 tpmcf/fit_cf.py
 tpmcf/integral_constrain.py
 tpmcf/jkgen.py
