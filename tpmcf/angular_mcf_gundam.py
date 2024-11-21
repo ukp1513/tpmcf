@@ -58,9 +58,9 @@ def computeCF(real_tab, real_properties, rand_tab, thmin, thmax, th_nbins, realr
 	ra_rand = rand_tab[randracol]
 	dec_rand = rand_tab[randdeccol]
 	
-	d_th = (np.log10(thmax) - np.log10(thmin)) / nbins
+	d_th = (np.log10(thmax) - np.log10(thmin)) / th_nbins
 
-	th, omega = omegaTheta(real_tab, rand_tab, th_min=thmin, th_max=thmax, d_th=d_th, realracol=realracol,realdeccol=realdeccol,randracol=randracol, randdeccol=randdeccol)
+	th, omega = omegaTheta(real_tab, rand_tab, th_min=thmin, nbins=th_nbins, d_th=d_th, realracol=realracol,realdeccol=realdeccol,randracol=randracol, randdeccol=randdeccol)
 	
 	th_omega_mcfs = np.empty((len(th), 0))
 	
@@ -73,10 +73,8 @@ def computeCF(real_tab, real_properties, rand_tab, thmin, thmax, th_nbins, realr
 		
 		prop_now_ranked = rankdata(prop_now)
 		
-		th, weighted_omega_ranked = weightedOmegaTheta(real_tab, rand_tab, weight_real=prop_now_ranked, th_min=thmin, th_max=thmax, d_th=d_th, realracol=realracol,realdeccol=realdeccol,randracol=randracol, randdeccol=randdeccol)
+		th, weighted_omega_ranked = weightedOmegaTheta(real_tab, rand_tab, weight_real=prop_now_ranked, th_min=thmin, nbins=th_nbins, d_th=d_th, realracol=realracol,realdeccol=realdeccol,randracol=randracol, randdeccol=randdeccol)
 	
-		th, weighted_omega_ranked = weightedOmegaTheta(ra_real, dec_real, prop_now_ranked, ra_rand, dec_rand, th_min=thmin, th_max=thmax, nbins=th_nbins)
-
 		M_theta = np.array(mcfTheta(th, omega, weighted_omega_ranked)).reshape(len(th), 1)
 				
 		th_omega_mcfs = np.hstack((th_omega_mcfs, M_theta))
