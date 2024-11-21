@@ -58,7 +58,7 @@ def computeCF(real_tab, real_properties, rand_tab, thmin, thmax, th_nbins, realr
 	ra_rand = rand_tab[randracol]
 	dec_rand = rand_tab[randdeccol]
 	
-	d_th = (np.log10(th_max) - np.log10(th_min)) / nbins
+	d_th = (np.log10(thmax) - np.log10(thmin)) / nbins
 
 	th, omega = omegaTheta(real_tab, rand_tab, th_min=thmin, th_max=thmax, d_th=d_th, realracol=realracol,realdeccol=realdeccol,randracol=randracol, randdeccol=randdeccol)
 	
