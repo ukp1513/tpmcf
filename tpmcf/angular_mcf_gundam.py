@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 from scipy.stats import rankdata
-
+from astropy.table import Table
 from astropy.cosmology import FlatLambdaCDM
 import time
 import treecorr
@@ -20,14 +20,15 @@ logging.basicConfig(level=logging.INFO)
 
 def omegaTheta(real_tab, rand_tab, th_min=0.001, nbins=8, d_th=0.3, ra_units='deg', dec_units='deg', sep_units='degrees', realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec'):
 
+	gals = Table.from_pandas(real_tab)
+	rans = Table.from_pandas(rand_tab)
 	
-
 	par = gun.packpars(kind='acf', nsept=nbins, septmin=th_min, dsept=d_th, logsept=True, cra=realracol, cdec=realdeccol, cra1=randracol,cdec1=randdeccol, estimator='LS', doboot=False) 
 	
-	real_tab['wei'] = 1.
-	rand_tab['wei'] = 1.
+	gals['wei'] = 1.
+	rans['wei'] = 1.
 
-	result = gun.acf(real_tab, rand_tab, par)
+	result = gun.acf(gals, rans, par)
 	th = result['thm']
 	omega = result['wth']
 
@@ -35,15 +36,18 @@ def omegaTheta(real_tab, rand_tab, th_min=0.001, nbins=8, d_th=0.3, ra_units='de
 	
 def weightedOmegaTheta(real_tab, rand_tab, weight_real, th_min=0.001, nbins=8, d_th=0.3, ra_units='deg', dec_units='deg', sep_units='degrees', realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec'):
 
+	gals = Table.from_pandas(real_tab)
+	rans = Table.from_pandas(rand_tab)
+	
 	par = gun.packpars(kind='acf', nsept=nbins, septmin=th_min, dsept=d_th, logsept=True, cra=realracol, cdec=realdeccol, cra1=randracol,cdec1=randdeccol, estimator='LS', doboot=False) 
 	
-	real_tab['wei'] = weight_real
-	rand_tab['wei'] = 1.
-
-	result = gun.acf(real_tab, rand_tab, par)
+	gals['wei'] = weight_real
+	rans['wei'] = 1.
+	
+	result = gun.acf(gals, rans, par)
 	th = result['thm']
 	weighted_omega = result['wth']
-
+	
 	return th, weighted_omega
 	
 def mcfTheta(th, omega_th, weighted_omega_th):
@@ -51,6 +55,8 @@ def mcfTheta(th, omega_th, weighted_omega_th):
 	return M_th
 	
 def computeCF(real_tab, real_properties, rand_tab, thmin, thmax, th_nbins, realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec'):
+
+	
 
 	ra_real = real_tab[realracol]
 	dec_real = real_tab[realdeccol]
