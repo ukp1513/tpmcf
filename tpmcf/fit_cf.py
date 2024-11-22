@@ -246,8 +246,8 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 
 	plt.errorbar(sep_toPlot, CF_toPlot, CF_err_toPlot,ls='none',capsize=5,ms=10,marker='o',mew=1.0,mec='black',mfc='white',ecolor='black',elinewidth=1)
 
-	#final_path = 'finals'
-	final_path = 'finals_%s_%s' %(str(sepmin_tofit).replace(".","p"),str(sepmax_tofit).replace(".","p"))
+	final_path = 'finals'
+	#final_path = 'finals_%s_%s' %(str(sepmin_tofit).replace(".","p"),str(sepmax_tofit).replace(".","p"))
 	if not os.path.exists(final_path):
 	    os.makedirs(final_path)
 	else:
