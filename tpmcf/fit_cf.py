@@ -48,6 +48,7 @@ def angularCF_model(theta, A, gam):
 def redshift3dCF_model(s, s0, gam):
 	return pow((s/s0), (-1*gam))
 
+
 def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, rand_tab, real_properties, to_svd_filter=0, to_hartlap_corr=0, fit_2pcf = 1, work_on_mcf = 1, dir_name=os.getcwd(), plotxscale='log', plotyscale='log', ignore_negatives = True, realracol='RA', realdeccol='DEC', randracol='RA', randdeccol='Dec', compute_IC = True):
 
 	if(stattype == 'angular'):
@@ -340,7 +341,7 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 		# FIT USING CURVE_FIT
 
 		if(stattype == 'angular'):
-			
+		
 			try:
 				popt, pcov = curve_fit(angularCF_model, sep_toFit, CF_toFit, sigma=cov_mat_toFit)
 			except RuntimeError as e:
@@ -351,6 +352,7 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 				print("\nProblem fitting curve: General Exception")
 				print(f"Error message: {e}")
 				return
+				
 			A_curve, A_err_curve, gam_curve, gam_err_curve = popt[0],np.sqrt(pcov[0,0]),popt[1],np.sqrt(pcov[1,1])
 			print('Curve fitting parameters:\nA = %0.2lf +/- %0.2lf\ngamma = %0.2lf +/- %0.2lf\n' %(A_curve, A_err_curve, gam_curve, gam_err_curve))
 			best_fit_model_curve=angularCF_model(sep_toFit, A_curve, gam_curve)
@@ -358,8 +360,10 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 			label = r"$\omega(\theta)=A \theta^{1-\gamma}$" + "\n" + r"$A = %0.2f \pm %0.2f$" + "\n" + r"$\gamma = %0.2f \pm %0.2f$"
 			plt.plot(sep_toPlot, angularCF_model(sep_toPlot, A_curve, gam_curve), color='red',label=label %(A_curve, A_err_curve, gam_curve, gam_err_curve))
 			
+			
 			# WRITING TO FILES
 
+			np.savetxt(final_path+os.path.sep+'CF_fit_params_covariance.txt', pcov, fmt='%f')
 			np.savetxt(final_path+os.path.sep+'CF_fit_params.txt', [A_curve, A_err_curve, gam_curve, gam_err_curve], fmt='%f', delimiter='\n')
 			np.savetxt(final_path+os.path.sep+'sepFitRange.txt', [sepmin_tofit, sepmax_tofit], fmt='%f', delimiter='\n')
 			
@@ -393,6 +397,7 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 		
 			# WRITING TO FILES
 
+			np.savetxt(final_path+os.path.sep+'CF_fit_params_covariance.txt', pcov, fmt='%f')
 			np.savetxt(final_path+os.path.sep+'CF_fit_params.txt', [s0_curve, s0_err_curve, gam_curve, gam_err_curve], fmt='%f', delimiter='\n')
 			np.savetxt(final_path+os.path.sep+'sepFitRange.txt', [sepmin_tofit, sepmax_tofit], fmt='%f', delimiter='\n')
 			

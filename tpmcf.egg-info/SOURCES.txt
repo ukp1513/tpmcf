@@ -9,6 +9,7 @@ tpmcf/angular_mcf_jk.py
 tpmcf/fit_cf.py
 tpmcf/integral_constrain.py
 tpmcf/jkgen.py
+tpmcf/projected_mcf_gundam.py
 tpmcf/threeD_mcf.py
 tpmcf.egg-info/PKG-INFO
 tpmcf.egg-info/SOURCES.txt
