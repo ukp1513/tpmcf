@@ -20,23 +20,27 @@ from . import jkgen
 
 
 def comovingDistanceH0(redshift, cosmology):
-	comDist = cosmology.comoving_distance(redshift)*cosmology.H0/100.
+	little_h = cosmology.H0.value/100.
+	comDist = cosmology.comoving_distance(redshift).value*little_h
 	return comDist
 	
-def xiS(ra_real, dec_real, dist_real, ra_rand, dec_rand, dist_rand, s_min, s_max, bin_size, bin_type, ra_units, dec_units):
+def xiS(ra_real, dec_real, z_real, ra_rand, dec_rand, z_rand, s_min, s_max, nbins, cosmology, bin_type='Log', ra_units='deg', dec_units='deg'):
 
+	dist_real = comovingDistanceH0(z_real, cosmology)
+	dist_rand = comovingDistanceH0(z_rand, cosmology)
+	
 	# Create catalog for the data
 	cat_real = treecorr.Catalog(ra=ra_real, dec=dec_real, r=dist_real, ra_units=ra_units, dec_units=dec_units)
-	dd = treecorr.NNCorrelation(bin_type=bin_type, min_sep=s_min, max_sep=s_max, bin_size=bin_size)
+	dd = treecorr.NNCorrelation(min_sep=s_min, max_sep=s_max, nbins=nbins, bin_type=bin_type)
 	dd.process(cat_real)
 
 	# Create catalog for the randoms
 	cat_rand = treecorr.Catalog(ra=ra_rand, dec=dec_rand, r=dist_rand, ra_units=ra_units, dec_units=dec_units)
-	rr = treecorr.NNCorrelation(bin_type=bin_type, min_sep=s_min, max_sep=s_max, bin_size=bin_size)
+	rr = treecorr.NNCorrelation(min_sep=s_min, max_sep=s_max, nbins=nbins, bin_type=bin_type)
 	rr.process(cat_rand)
 
 	# Create their cross catalog
-	dr = treecorr.NNCorrelation(bin_type=bin_type, min_sep=s_min, max_sep=s_max, bin_size=bin_size)
+	dr = treecorr.NNCorrelation(min_sep=s_min, max_sep=s_max, nbins=nbins, bin_type=bin_type)
 	dr.process(cat_real, cat_rand)
 	
 	# Calculate 2pt correlation function of the total sample
@@ -45,20 +49,23 @@ def xiS(ra_real, dec_real, dist_real, ra_rand, dec_rand, dist_rand, s_min, s_max
 
 	return s, xi
 	
-def weightedXiS(ra_real, dec_real, dist_real, weight_real, ra_rand, dec_rand, dist_rand, s_min, s_max, bin_size, bin_type, ra_units, dec_units):
+def weightedXiS(ra_real, dec_real, z_real, weight_real, ra_rand, dec_rand, z_rand, s_min, s_max, nbins, cosmology, bin_type='Log', ra_units='deg', dec_units='deg'):
 
+	dist_real = comovingDistanceH0(z_real, cosmology)
+	dist_rand = comovingDistanceH0(z_rand, cosmology)
+	
 	# Create catalog for the data
 	cat_real = treecorr.Catalog(ra=ra_real, dec=dec_real, w=weight_real, r=dist_real, ra_units=ra_units, dec_units=dec_units)
-	ww = treecorr.NNCorrelation(bin_type=bin_type, min_sep=s_min, max_sep=s_max, bin_size=bin_size)
+	ww = treecorr.NNCorrelation(min_sep=s_min, max_sep=s_max, nbins=nbins, bin_type=bin_type)
 	ww.process(cat_real)
 
 	# Create catalog for the randoms
 	cat_rand = treecorr.Catalog(ra=ra_rand, dec=dec_rand, r=dist_rand, ra_units=ra_units, dec_units=dec_units)
-	rr = treecorr.NNCorrelation(bin_type=bin_type, min_sep=s_min, max_sep=s_max, bin_size=bin_size)
+	rr = treecorr.NNCorrelation(min_sep=s_min, max_sep=s_max, nbins=nbins, bin_type=bin_type)
 	rr.process(cat_rand)
 
 	# Create their cross catalog
-	wr = treecorr.NNCorrelation(bin_type=bin_type, min_sep=s_min, max_sep=s_max, bin_size=bin_size)
+	wr = treecorr.NNCorrelation(min_sep=s_min, max_sep=s_max, nbins=nbins, bin_type=bin_type)
 	wr.process(cat_real, cat_rand)
 	
 	# Calculate 2pt correlation function of the total sample
@@ -71,7 +78,7 @@ def mcfS(s, xi_s, weighted_xi_s):
 	M_s = (1 + weighted_xi_s)/(1 + xi_s)
 	return M_s
 	
-def computeCF(real_tab, real_properties, rand_tab, s_min, s_max, bin_size, bin_type, ranked, ra_units, dec_units, realracol, realdeccol, realzcol, randracol, randdeccol, randzcol, cosmology):
+def computeCF(real_tab, real_properties, rand_tab, s_min, s_max, nbins, bin_type, ranked, ra_units, dec_units, realracol, realdeccol, realzcol, randracol, randdeccol, randzcol, cosmology):
 
 	ra_real = real_tab[realracol]
 	dec_real = real_tab[realdeccol]
@@ -81,10 +88,8 @@ def computeCF(real_tab, real_properties, rand_tab, s_min, s_max, bin_size, bin_t
 	dec_rand = rand_tab[randdeccol]
 	z_rand = rand_tab[randzcol]
 	
-	dist_real = comovingDistanceH0(z_real, cosmology)
-	dist_rand = comovingDistanceH0(z_rand, cosmology)
-
-	s, xi = xiS(ra_real, dec_real, dist_real, ra_rand, dec_rand, dist_rand, s_min, s_max, bin_size, bin_type, ra_units, dec_units)
+	
+	s, xi = xiS(ra_real, dec_real, dist_real, ra_rand, dec_rand, dist_rand, s_min, s_max, nbins, cosmology)
 	
 	s_xi_mcfs = np.empty((len(s), 0))
 	
@@ -101,8 +106,8 @@ def computeCF(real_tab, real_properties, rand_tab, s_min, s_max, bin_size, bin_t
 		else:
 			weight_real = prop_now
 			
-		s, weighted_xi_ranked = weightedXiS(ra_real, dec_real, dist_real, weight_real, ra_rand, dec_rand, dist_rand, s_min, s_max, bin_size, bin_type, ra_units, dec_units)
-
+		s, weighted_xi_ranked = weightedXiS(ra_real, dec_real, dist_real, weight_real, ra_rand, dec_rand, dist_rand, s_min, s_max, nbins, cosmology)
+		
 		M_s = np.array(mcfS(s, xi, weighted_xi_ranked)).reshape(len(s), 1)
 				
 		s_xi_mcfs = np.hstack((s_xi_mcfs, M_s))
@@ -111,7 +116,7 @@ def computeCF(real_tab, real_properties, rand_tab, s_min, s_max, bin_size, bin_t
 	return s_xi_mcfs
 	
 	
-def runComputation3D(real_tab, real_properties, rand_tab, njacks_ra, njacks_dec, working_dir=os.getcwd(), s_min=5.0, s_max=5000.0, bin_size=0.5, bin_type='Log', ranked=True, ra_units='deg', dec_units='deg', realracol='RA',realdeccol='DEC', realzcol='redshift', randracol='RA', randdeccol='Dec', randzcol='redshift', cosmology_H0_Om0=[70.0, 0.3]):
+def runComputation3D(real_tab, real_properties, rand_tab, njacks_ra, njacks_dec, working_dir=os.getcwd(), s_min=5.0, s_max=5000.0, nbins=8, bin_type='Log', ranked=True, ra_units='deg', dec_units='deg', realracol='RA',realdeccol='DEC', realzcol='redshift', randracol='RA', randdeccol='Dec', randzcol='redshift', cosmology_H0_Om0=[70.0, 0.3]):
 
 	H0, Om0=cosmology_H0_Om0
 	cosmology = FlatLambdaCDM(H0=H0, Om0=Om0)
@@ -147,7 +152,7 @@ def runComputation3D(real_tab, real_properties, rand_tab, njacks_ra, njacks_dec,
 			result_file = 'results/jackknifes/CFJackknife_jk%d.txt' %jk_i
 			print("Working on the jackknife sample %d" %jk_i)
 			
-		result_i = computeCF(real_tab_i, real_properties, rand_tab_i, s_min, s_max, bin_size, bin_type, ranked, ra_units, dec_units, realracol, realdeccol, realzcol, randracol, randdeccol, randzcol, cosmology=cosmology)
+		result_i = computeCF(real_tab_i, real_properties, rand_tab_i, s_min, s_max, nbins, bin_type, ranked, ra_units, dec_units, realracol, realdeccol, realzcol, randracol, randdeccol, randzcol, cosmology=cosmology)
 		
 		np.savetxt(result_file, result_i, delimiter="\t",fmt='%f')
 	

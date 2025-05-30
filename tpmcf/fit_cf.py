@@ -6,32 +6,30 @@ import shutil
 from scipy.optimize import curve_fit
 import bokeh.palettes as bp
 from . import integral_constrain
+from matplotlib.ticker import ScalarFormatter
+from matplotlib.ticker import FormatStrFormatter
 
 from matplotlib import font_manager as fm, rcParams
 import socket
 
-if(os.environ['THIS_PLATFORM'] == 'hp455'):
-	fpath = "/home/krishna/Dropbox/fonts/cmunss.ttf"
-	source_dir = '/home/krishna/krishna_work/DES_MCF'
-elif(os.environ['THIS_PLATFORM'] == 'hippo'):
-	fpath = "/home/ukp1513/fonts/cmunss.ttf"
-	source_dir = "/data/ukp1513/des_mcf/"
-elif(os.environ['THIS_PLATFORM'] == 'plgrid'):
-	fpath = '/net/people/plgrid/plgukp1513/fonts/cmunss.ttf'
-	source_dir = '/net/ascratch/people/plgukp1513/des_mcf/data'
-elif(os.environ['THIS_PLATFORM'] == 'chpc'):
-	fpath = '/home/usureshkumar/fonts/cmunss.ttf'
-	source_dir = '/home/usureshkumar/lustre/des'
-else:
-        print("Platform not found! Exiting...")
-        exit(0)
+#if(os.environ['THIS_PLATFORM'] == 'hp455'):
+#	fpath = "/home/krishna/Dropbox/fonts/cmunss.ttf"
+#elif(os.environ['THIS_PLATFORM'] == 'hippo'):
+#	fpath = "/home/ukp1513/fonts/cmunss.ttf"
+#elif(os.environ['THIS_PLATFORM'] == 'plgrid'):
+#	fpath = '/net/people/plgrid/plgukp1513/fonts/cmunss.ttf'
+#elif(os.environ['THIS_PLATFORM'] == 'chpc'):
+#	fpath = '/home/usureshkumar/fonts/cmunss.ttf'
+#else:
+#    print("Platform not found! Exiting...")
+#    exit(0)
 
 	
-prop = fm.FontProperties(fname=fpath,size=12,math_fontfamily='stixsans')
-prop_big = fm.FontProperties(fname=fpath,size=14,math_fontfamily='stixsans')
-prop_small = fm.FontProperties(fname=fpath,size=12,math_fontfamily='stixsans')
-prop_tiny = fm.FontProperties(fname=fpath,size=7,math_fontfamily='stixsans')
-fname = os.path.split(fpath)[1]
+#prop = fm.FontProperties(fname=fpath,size=12,math_fontfamily='stixsans')
+#prop_big = fm.FontProperties(fname=fpath,size=14,math_fontfamily='stixsans')
+#prop_small = fm.FontProperties(fname=fpath,size=12,math_fontfamily='stixsans')
+#prop_tiny = fm.FontProperties(fname=fpath,size=7,math_fontfamily='stixsans')
+#fname = os.path.split(fpath)[1]
 
 plt.style.use('classic')
 
@@ -47,9 +45,12 @@ def angularCF_model(theta, A, gam):
 	
 def redshift3dCF_model(s, s0, gam):
 	return pow((s/s0), (-1*gam))
+	
+def projected3dCF_model(rp, r0, gam):
+	return rp * pow((r0/rp), gam) * gamma(0.5) * gamma(0.5*(gam-1)) / gamma(0.5*gam)
 
 
-def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, rand_tab, real_properties, to_svd_filter=0, to_hartlap_corr=0, fit_2pcf = 1, work_on_mcf = 1, dir_name=os.getcwd(), plotxscale='log', plotyscale='log', ignore_negatives = True, realracol='RA', realdeccol='DEC', randracol='RA', randdeccol='Dec', compute_IC = True):
+def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab=None, rand_tab=None, real_properties=[], to_svd_filter=0, to_hartlap_corr=0, fit_2pcf = 1, full_covmat = 1, work_on_mcf = 1, dir_name=os.getcwd(), plotxscale='log', plotyscale='log', ignore_negatives = True, realracol='RA', realdeccol='DEC', randracol='RA', randdeccol='Dec', compute_IC = False):
 
 	if(stattype == 'angular'):
 
@@ -57,8 +58,8 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 		cfylabel = r"$\omega(\theta)$"
 		mcfxlabel = r"$\theta \,\,\, (deg)$"
 		mcfylabel = r"$M (\theta)$"
-		cffig_name = "fig_angularCF.png"
-		mcffig_name = "fig_angularMCF.png"
+		cffig_name = dir_name+os.path.sep+"fig_angularCF.png"
+		mcffig_name = dir_name+os.path.sep+"fig_angularMCF.png"
 
 	elif(stattype == '3d_redshift'):
 
@@ -66,8 +67,17 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 		cfylabel = r"$\xi(s)$"
 		mcfxlabel = r"$s \,\,\, (Mpc/h)$"
 		mcfylabel = r"$M (s)$"
-		cffig_name = "fig_3DRedshiftCF.png"
-		mcffig_name = "fig_3DRedshiftMCF.png"
+		cffig_name = dir_name+os.path.sep+"fig_3DRedshiftCF.png"
+		mcffig_name = dir_name+os.path.sep+"fig_3DRedshiftMCF.png"
+		
+	elif(stattype == '3d_projected'):
+
+		cfxlabel = r"$r_p \,\,\, (Mpc/h)$"
+		cfylabel = r"$\omega_p(r_p) \,\,\, (Mpc/h)$"
+		mcfxlabel = r"$r_p \,\,\, (Mpc/h)$"
+		mcfylabel = r"$M_p (r_p)$"
+		cffig_name = dir_name+os.path.sep+"fig_3DProjectedCF.png"
+		mcffig_name = dir_name+os.path.sep+"fig_3DProjectedMCF.png"
 		
 	os.chdir(dir_name)
 
@@ -82,8 +92,7 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 		print("\nHartlap correction done!")
 
 	
-	marks = real_properties
-	n_marks = len(marks)
+	
 
 	# REMOVING PREVIOUS INV COVAR FILES IF EXIST
 	
@@ -131,12 +140,14 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 		CFJK=np.loadtxt('results/jackknifes/CFJackknife_jk%d.txt' %(copy+1))[:,1]
 		CFRealAll_tofile[:][copy+2]=CFJK
 
-	np.savetxt("results/CFRealAll.txt",np.transpose(CFRealAll_tofile),delimiter="\t",fmt='%f')	
+	np.savetxt(dir_name+os.path.sep+"results/CFRealAll.txt",np.transpose(CFRealAll_tofile),delimiter="\t",fmt='%f')	
 
 
 	if(work_on_mcf == 1):
 		# COLLECTING MCFs
 
+		marks = real_properties
+		n_marks = len(marks)
 		print("Marks : ", marks)
 
 
@@ -150,7 +161,7 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 				mcfRealAll_tofile[:][copy+2]=mcfJK
 
 
-			np.savetxt("results/mcfRealAll_%s.txt" %mark,np.transpose(mcfRealAll_tofile),delimiter="\t",fmt='%f')		
+			np.savetxt(dir_name+os.path.sep+"results/mcfRealAll_%s.txt" %mark,np.transpose(mcfRealAll_tofile),delimiter="\t",fmt='%f')		
 
 	# FILTERING NAN AND INF VALUES
 
@@ -191,14 +202,14 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 	nbins_CF=total_nbins-len(filter_index_CF)
 
 	print("Number of CF bins with non-nan values:", nbins_CF)
-	np.savetxt('results/CFRealAll_filtered.txt',CFRealAll,delimiter='\t',fmt='%f')
+	np.savetxt(dir_name+os.path.sep+'results/CFRealAll_filtered.txt',CFRealAll,delimiter='\t',fmt='%f')
 
 	#REMOVING NAN BINS FROM mcf FILE
 	if(work_on_mcf == 1):
 		for mark_i, mark in enumerate(marks):
 			mcfRealAll = np.loadtxt('results/mcfRealAll_%s.txt' %mark)
 			mcfRealAll=np.delete(mcfRealAll, filter_index_CF, axis=0)
-			np.savetxt('results/mcfRealAll_%s_filtered.txt' %mark,mcfRealAll,delimiter='\t',fmt='%f')
+			np.savetxt(dir_name+os.path.sep+'results/mcfRealAll_%s_filtered.txt' %mark,mcfRealAll,delimiter='\t',fmt='%f')
 
 
 	#FILTERING TO FIT BINS
@@ -215,7 +226,7 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 	CFRealAll_tofit=np.delete(CFRealAll, filter_index_CF_tofit, axis=0)
 
 
-	np.savetxt('results/CFRealAll_filtered_tofit.txt', CFRealAll_tofit,delimiter='\t',fmt='%f')
+	np.savetxt(dir_name+os.path.sep+'results/CFRealAll_filtered_tofit.txt', CFRealAll_tofit,delimiter='\t',fmt='%f')
 
 
 
@@ -247,7 +258,7 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 
 	plt.errorbar(sep_toPlot, CF_toPlot, CF_err_toPlot,ls='none',capsize=5,ms=10,marker='o',mew=1.0,mec='black',mfc='white',ecolor='black',elinewidth=1)
 
-	final_path = 'finals'
+	final_path = dir_name+os.path.sep+'finals'
 	#final_path = 'finals_%s_%s' %(str(sepmin_tofit).replace(".","p"),str(sepmax_tofit).replace(".","p"))
 	if not os.path.exists(final_path):
 	    os.makedirs(final_path)
@@ -320,10 +331,10 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 			fEff.close()
 
 			if(to_svd_filter==1):
-				np.savetxt("biproducts/inv_corr_mat_SVD.txt",np.transpose(inv_corr_mat_SVD),delimiter="\t",fmt='%f')
+				np.savetxt(dir_name+os.path.sep+"biproducts/inv_corr_mat_SVD.txt",np.transpose(inv_corr_mat_SVD),delimiter="\t",fmt='%f')
 			else:
-				np.savetxt("biproducts/inv_cov_mat.txt",np.transpose(inv_cov_mat),delimiter="\t",fmt='%f')
-				np.savetxt("biproducts/cov_mat.txt",np.transpose(cov_mat),delimiter="\t",fmt='%f')
+				np.savetxt(dir_name+os.path.sep+"biproducts/inv_cov_mat.txt",np.transpose(inv_cov_mat),delimiter="\t",fmt='%f')
+				np.savetxt(dir_name+os.path.sep+"biproducts/cov_mat.txt",np.transpose(cov_mat),delimiter="\t",fmt='%f')
 
 
 		sep_toFit = np.loadtxt('results/CFRealAll_filtered_tofit.txt')[:,0]
@@ -339,11 +350,16 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 		np.savetxt(final_path+os.path.sep+'final_CF.txt', np.transpose([sep_toFit, CF_toFit, CF_err_toFit]), fmt='%f', delimiter='\t')
 		
 		# FIT USING CURVE_FIT
+		
+		if(full_covmat == 1):
+			sigma = cov_mat_toFit
+		else:
+			sigma = CF_err_toFit	
 
 		if(stattype == 'angular'):
 		
 			try:
-				popt, pcov = curve_fit(angularCF_model, sep_toFit, CF_toFit, sigma=cov_mat_toFit)
+				popt, pcov = curve_fit(angularCF_model, sep_toFit, CF_toFit, sigma=sigma)
 			except RuntimeError as e:
 				print("\nProblem fitting curve: RuntimeError")
 				print(f"Error message: {e}")
@@ -355,10 +371,10 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 				
 			A_curve, A_err_curve, gam_curve, gam_err_curve = popt[0],np.sqrt(pcov[0,0]),popt[1],np.sqrt(pcov[1,1])
 			print('Curve fitting parameters:\nA = %0.2lf +/- %0.2lf\ngamma = %0.2lf +/- %0.2lf\n' %(A_curve, A_err_curve, gam_curve, gam_err_curve))
-			best_fit_model_curve=angularCF_model(sep_toFit, A_curve, gam_curve)
+			best_fit_model_curve=angularCF_model(sep_toPlot, A_curve, gam_curve)
 			plt.errorbar(sep_toFit, CF_toFit, CF_err_toFit,ls='none',capsize=5,ms=10,marker='o',mew=1.0,mec='black',mfc='black',ecolor='black',elinewidth=1)
 			label = r"$\omega(\theta)=A \theta^{1-\gamma}$" + "\n" + r"$A = %0.2f \pm %0.2f$" + "\n" + r"$\gamma = %0.2f \pm %0.2f$"
-			plt.plot(sep_toPlot, angularCF_model(sep_toPlot, A_curve, gam_curve), color='red',label=label %(A_curve, A_err_curve, gam_curve, gam_err_curve))
+			plt.plot(sep_toPlot, best_fit_model_curve, color='red',label=label %(A_curve, A_err_curve, gam_curve, gam_err_curve))
 			
 			
 			# WRITING TO FILES
@@ -378,7 +394,7 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 		elif(stattype == '3d_redshift'):
 		
 			try:
-				popt, pcov = curve_fit(redshift3dCF_model, sep_toFit, CF_toFit, sigma=cov_mat_toFit)
+				popt, pcov = curve_fit(redshift3dCF_model, sep_toFit, CF_toFit, p0=[5.0, 1.8], sigma=sigma)
 			except RuntimeError as e:
 				print("\nProblem fitting curve: RuntimeError")
 				print(f"Error message: {e}")
@@ -389,10 +405,10 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 				return
 			s0_curve, s0_err_curve, gam_curve, gam_err_curve = popt[0],np.sqrt(pcov[0,0]),popt[1],np.sqrt(pcov[1,1])
 			print('Curve fitting parameters:\ns0 = %0.2lf +/- %0.2lf\ngamma = %0.2lf +/- %0.2lf\n' %(s0_curve, s0_err_curve, gam_curve, gam_err_curve))
-			best_fit_model_curve=redshift3dCF_model(sep_toFit, s0_curve, gam_curve)
+			best_fit_model_curve=redshift3dCF_model(sep_toPlot, s0_curve, gam_curve)
 			plt.errorbar(sep_toFit, CF_toFit, CF_err_toFit,ls='none',capsize=5,ms=10,marker='o',mew=1.0,mec='black',mfc='black',ecolor='black',elinewidth=1)
-			label = r"$\xi(s)=(s/s_0) \theta^{-\gamma}$" + "\n" + r"$s_0 = %0.2f \pm %0.2f$" + "\n" + r"$\gamma = %0.2f \pm %0.2f$"
-			plt.plot(sep_toPlot, redshift3dCF_model(sep_toPlot, s0_curve, gam_curve), color='red',label=label %(s0_curve, s0_err_curve, gam_curve, gam_err_curve))
+			label = r"$\xi(s)=(s/s_0)^{-\gamma}$" + "\n" + r"$s_0 = %0.2f \pm %0.2f$" + "\n" + r"$\gamma = %0.2f \pm %0.2f$"
+			plt.plot(sep_toPlot, best_fit_model_curve, color='red',label=label %(s0_curve, s0_err_curve, gam_curve, gam_err_curve))
 
 		
 			# WRITING TO FILES
@@ -404,13 +420,43 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 			
 			if(compute_IC == True):
 				print("IC Computation is not coded for 3d...") #TODO
+				
+		elif(stattype == '3d_projected'):
+		
+			try:
+				popt, pcov = curve_fit(projected3dCF_model, sep_toFit, CF_toFit, p0=[5.0, 1.8], sigma=sigma)
+			except RuntimeError as e:
+				print("\nProblem fitting curve: RuntimeError")
+				print(f"Error message: {e}")
+				return
+			except Exception as e:
+				print("\nProblem fitting curve: General Exception")
+				print(f"Error message: {e}")
+				return
+			r0_curve, r0_err_curve, gam_curve, gam_err_curve = popt[0],np.sqrt(pcov[0,0]),popt[1],np.sqrt(pcov[1,1])
+			print('Curve fitting parameters:\nr0 = %0.2lf +/- %0.2lf\ngamma = %0.2lf +/- %0.2lf\n' %(r0_curve, r0_err_curve, gam_curve, gam_err_curve))
+			best_fit_model_curve=projected3dCF_model(sep_toPlot, r0_curve, gam_curve)
+			plt.errorbar(sep_toFit, CF_toFit, CF_err_toFit,ls='none',capsize=5,ms=10,marker='o',mew=1.0,mec='black',mfc='black',ecolor='black',elinewidth=1)
+			label = r"$\xi(r)=(r/r_0)^{-\gamma}$" + "\n" + r"$r_0 = %0.2f \pm %0.2f$" + "\n" + r"$\gamma = %0.2f \pm %0.2f$"
+			plt.plot(sep_toPlot, best_fit_model_curve, color='red',label=label %(r0_curve, r0_err_curve, gam_curve, gam_err_curve))
+
+		
+			# WRITING TO FILES
+
+			np.savetxt(final_path+os.path.sep+'CF_fit_params_covariance.txt', pcov, fmt='%f')
+			np.savetxt(final_path+os.path.sep+'CF_fit_params.txt', [r0_curve, r0_err_curve, gam_curve, gam_err_curve], fmt='%f', delimiter='\n')
+			np.savetxt(final_path+os.path.sep+'sepFitRange.txt', [sepmin_tofit, sepmax_tofit], fmt='%f', delimiter='\n')
+			
+			
+			if(compute_IC == True):
+				print("IC Computation is not coded for 3d...") #TODO
 
 
 	plt.xscale(plotxscale)
 	plt.yscale(plotyscale)
-	plt.xlabel(cfxlabel,labelpad=10, fontproperties=prop_big)
-	plt.ylabel(cfylabel,labelpad=0.5, fontproperties=prop_big)
-	plt.legend(prop=prop)
+	plt.xlabel(cfxlabel,labelpad=10)#, fontproperties=prop_big)
+	plt.ylabel(cfylabel,labelpad=0.5)#, fontproperties=prop_big)
+	plt.legend()#prop=prop)
 	plt.savefig(cffig_name , dpi=300, bbox_inches = 'tight')
 	plt.close()
 
@@ -450,9 +496,11 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab, ran
 			ax_now.axhline(y=1, color='black', linestyle='dashed')
 
 		plt.xscale(plotxscale)
-		plt.xlabel(mcfxlabel,labelpad=10, fontproperties=prop_big)
-		plt.ylabel(mcfylabel,labelpad=0.5, fontproperties=prop_big)
-		plt.legend(numpoints=1,frameon=False,loc=0,prop=prop_tiny)
+		plt.xlabel(mcfxlabel,labelpad=10)#, fontproperties=prop_big)
+		plt.ylabel(mcfylabel,labelpad=0.5)#, fontproperties=prop_big)
+		ax_now.xaxis.set_major_formatter(FormatStrFormatter('%g'))
+		ax_now.yaxis.set_major_formatter(FormatStrFormatter('%g'))
+		plt.legend(numpoints=1,frameon=False,loc=0)#,prop=prop_tiny)
 			
 		plt.grid(False)
 		plt.subplots_adjust(hspace=0.0,wspace=0.2)

@@ -1,4 +1,4 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.4
 Name: tpmcf
 Version: 0.1
 Summary: A package for computing and analyzing two-point and marked correlation functions.
@@ -12,3 +12,9 @@ Requires-Dist: scipy
 Requires-Dist: astropy
 Requires-Dist: treecorr
 Requires-Dist: healpy
+Dynamic: author
+Dynamic: author-email
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-dist
+Dynamic: summary

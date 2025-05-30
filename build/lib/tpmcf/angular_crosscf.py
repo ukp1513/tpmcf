@@ -32,10 +32,10 @@ def omegaTheta_cross(ra_real1, dec_real1, ra_rand1, dec_rand1,ra_real2, dec_real
 	rr.process(cat_rand1, cat_rand2)
 
 	dr = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units)
-	dr.process(cat_real1, cat_rand1)
+	dr.process(cat_real1, cat_rand2)
 
 	rd = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units)
-	rd.process(cat_real2, cat_rand2)
+	rd.process(cat_real2, cat_rand1)
 	
 	omega_cross, varomega_cross = dd.calculateXi(rr=rr, dr=dr, rd=rd)
 	th = np.exp(dd.meanlogr)
@@ -92,6 +92,8 @@ def runComputationAngular_cross(real_tab1, real_tab2, rand_tab1, rand_tab2, thmi
 		except Exception as e:
 			logging.error("Error processing jk_i = %d: %s", jk_i, e)
 			
+			return 1
+			
 		return 0
 	
 	n_jacks = njacks_ra * njacks_dec
@@ -105,7 +107,8 @@ def runComputationAngular_cross(real_tab1, real_tab2, rand_tab1, rand_tab2, thmi
 			executor.map(process_jackknife, range(n_jacks + 1))
 	else:
 		for jk_i in range(n_jacks+1):
-			process_jackknife(jk_i)
-	return 0
+			process_outcome = process_jackknife(jk_i)
+			
+	return process_outcome
 	
 

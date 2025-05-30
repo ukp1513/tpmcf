@@ -18,14 +18,12 @@ import gundam as gun
 
 logging.basicConfig(level=logging.INFO)
 
-def omegaTheta(ra_real, dec_real, ra_rand, dec_rand, th_min=0.001, th_max=50.0, nbins=8, ra_units='deg', dec_units='deg', sep_units='degrees', doboot=True):
+def omegaTheta(real_tab, rand_tab, th_min=0.001, nbins=8, d_th=0.3, ra_units='deg', dec_units='deg', sep_units='degrees', realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec'):
+
+	gals = Table.from_pandas(real_tab)
+	rans = Table.from_pandas(rand_tab)
 	
-	log_bin_width = (np.log10(th_max) - np.log10(th_min)) / (nbins)
-	
-	gals = Table([ra_real, dec_real], names=('ra', 'dec'))
-	rans = Table([ra_rand, dec_rand], names=('ra', 'dec'))	
-	
-	par = gun.packpars(kind='acf', nsept=nbins, septmin=th_min, dsept=log_bin_width, logsept=True, estimator='LS', doboot=doboot) 
+	par = gun.packpars(kind='acf', nsept=nbins, septmin=th_min, dsept=d_th, logsept=True, cra=realracol, cdec=realdeccol, cra1=randracol,cdec1=randdeccol, estimator='LS', doboot=False) 
 	
 	gals['wei'] = 1.
 	rans['wei'] = 1.
@@ -33,42 +31,30 @@ def omegaTheta(ra_real, dec_real, ra_rand, dec_rand, th_min=0.001, th_max=50.0, 
 	result = gun.acf(gals, rans, par)
 	th = result['thm']
 	omega = result['wth']
-	
-	
-	if(doboot):
-		omegaerr = result['wtherr']
-		return th, omega, omegaerr
-	else:
-		return th, omega
-	
-def weightedOmegaTheta(ra_real, dec_real, weight_real, ra_rand, dec_rand, th_min=0.001, th_max=50.0, nbins=8, ra_units='deg', dec_units='deg', sep_units='degrees', doboot=True):
 
-	log_bin_width = (np.log10(th_max) - np.log10(th_min)) / (nbins)
+	return th, omega
 	
-	gals = Table([ra_real, dec_real], names=('ra', 'dec'))
-	rans = Table([ra_rand, dec_rand], names=('ra', 'dec'))
+def weightedOmegaTheta(real_tab, rand_tab, weight_real, th_min=0.001, nbins=8, d_th=0.3, ra_units='deg', dec_units='deg', sep_units='degrees', realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec'):
+
+	gals = Table.from_pandas(real_tab)
+	rans = Table.from_pandas(rand_tab)
 	
-	par = gun.packpars(kind='acf', nsept=nbins, septmin=th_min, dsept=log_bin_width, logsept=True, estimator='LS', doboot=doboot) 
+	par = gun.packpars(kind='acf', nsept=nbins, septmin=th_min, dsept=d_th, logsept=True, cra=realracol, cdec=realdeccol, cra1=randracol,cdec1=randdeccol, estimator='LS', doboot=False) 
 	
-	gals['wei'] = weight_real/np.mean(weight_real) # gundam does not normalize the weight inside it. 
+	gals['wei'] = weight_real
 	rans['wei'] = 1.
 	
 	result = gun.acf(gals, rans, par)
 	th = result['thm']
 	weighted_omega = result['wth']
 	
-	
-	if(doboot):
-		weightedomegaerr = result['wtherr']
-		return th, weighted_omega, weightedomegaerr
-	else:
-		return th, weighted_omega
+	return th, weighted_omega
 	
 def mcfTheta(th, omega_th, weighted_omega_th):
 	M_th = (1 + weighted_omega_th)/(1 + omega_th)
 	return M_th
 	
-def computeCF(real_tab, real_properties, rand_tab, thmin, thmax, th_nbins, realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec', doboot=True):
+def computeCF(real_tab, real_properties, rand_tab, thmin, thmax, th_nbins, realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec'):
 
 	
 
@@ -80,7 +66,7 @@ def computeCF(real_tab, real_properties, rand_tab, thmin, thmax, th_nbins, realr
 	
 	d_th = (np.log10(thmax) - np.log10(thmin)) / th_nbins
 
-	th, omega = omegaTheta(ra_real, dec_real, ra_rand, dec_rand, th_min=thmin, th_max=thmax, nbins=th_nbins)
+	th, omega = omegaTheta(real_tab, rand_tab, th_min=thmin, nbins=th_nbins, d_th=d_th, realracol=realracol,realdeccol=realdeccol,randracol=randracol, randdeccol=randdeccol)
 	
 	th_omega_mcfs = np.empty((len(th), 0))
 	
@@ -93,7 +79,7 @@ def computeCF(real_tab, real_properties, rand_tab, thmin, thmax, th_nbins, realr
 		
 		prop_now_ranked = rankdata(prop_now)
 		
-		th, weighted_omega_ranked = weightedOmegaTheta(ra_real, dec_real, prop_now_ranked, ra_rand, dec_rand, th_min=thmin, th_max=thmax, nbins=th_nbins)
+		th, weighted_omega_ranked = weightedOmegaTheta(real_tab, rand_tab, weight_real=prop_now_ranked, th_min=thmin, nbins=th_nbins, d_th=d_th, realracol=realracol,realdeccol=realdeccol,randracol=randracol, randdeccol=randdeccol)
 	
 		M_theta = np.array(mcfTheta(th, omega, weighted_omega_ranked)).reshape(len(th), 1)
 				
@@ -103,14 +89,12 @@ def computeCF(real_tab, real_properties, rand_tab, thmin, thmax, th_nbins, realr
 	
 
 	
-def runComputationAngular(real_tab, real_properties, rand_tab, thmin, thmax, th_nbins, njacks_ra, njacks_dec, working_dir=os.getcwd(), realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec', omp=False, doboot=True):
+def runComputationAngular(real_tab, real_properties, rand_tab, thmin, thmax, th_nbins, njacks_ra, njacks_dec, working_dir=os.getcwd(), realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec', omp=False):
 
 	os.chdir(working_dir)
 	os.mkdir('biproducts')
 	os.mkdir('results')
 	os.mkdir('results/jackknifes')
-	
-	
 	
 	def process_jackknife(jk_i):
 
@@ -133,10 +117,7 @@ def runComputationAngular(real_tab, real_properties, rand_tab, thmin, thmax, th_
 			
 		return 0
 	
-	if(doboot == True):
-		n_jacks = 0
-	else:	
-		n_jacks = njacks_ra * njacks_dec
+	n_jacks = njacks_ra * njacks_dec
 	
 	jackknife_samples = jkgen.makeJkSamples(real_tab, rand_tab, njacks_ra, njacks_dec, realracol, realdeccol, randracol, randdeccol, plot=False)
 	
