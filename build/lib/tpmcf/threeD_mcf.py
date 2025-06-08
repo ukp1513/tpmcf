@@ -4,7 +4,7 @@ from matplotlib import rcParams
 from scipy.stats import rankdata
 
 from astropy.cosmology import FlatLambdaCDM
-
+import treecorr
 import treecorr
 import healpy as hp
 from astropy.io import fits

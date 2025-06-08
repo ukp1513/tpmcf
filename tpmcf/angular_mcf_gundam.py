@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 from scipy.stats import rankdata
-
+from astropy.table import Table
 from astropy.cosmology import FlatLambdaCDM
 import time
 import treecorr
@@ -14,64 +14,71 @@ import os
 from concurrent.futures import ProcessPoolExecutor
 import logging
 from . import jkgen
+import gundam as gun
 
 logging.basicConfig(level=logging.INFO)
 
-def omegaTheta(ra_real, dec_real, ra_rand, dec_rand, th_min=0.001, th_max=50.0, nbins=8, ra_units='deg', dec_units='deg', sep_units='degrees'):
-
-	# Create catalog for the data
-	cat_real = treecorr.Catalog(ra=ra_real, dec=dec_real, ra_units=ra_units, dec_units=dec_units)
-	dd = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units)
-	dd.process(cat_real)
-
-	# Create catalog for the randoms
-	cat_rand = treecorr.Catalog(ra=ra_rand, dec=dec_rand, ra_units=ra_units, dec_units=dec_units)
-	rr = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units)
-	rr.process(cat_rand)
-
-	# Create their cross catalog
-	dr = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units)
-	dr.process(cat_real, cat_rand)
+def omegaTheta(ra_real, dec_real, ra_rand, dec_rand, th_min=0.001, th_max=50.0, nbins=8, ra_units='deg', dec_units='deg', sep_units='degrees', doboot=True):
 	
-	# Calculate 2pt correlation function of the total sample
-	omega, varomega = dd.calculateXi(rr=rr, dr=dr)
-	th = np.exp(dd.meanlogr)
-
-	return th, omega
+	log_bin_width = (np.log10(th_max) - np.log10(th_min)) / (nbins)
 	
-def weightedOmegaTheta(ra_real, dec_real, weight_real, ra_rand, dec_rand, th_min=0.001, th_max=50.0, nbins=8, ra_units='deg', dec_units='deg', sep_units='degrees'):
-
-	# Create catalog for the data
-	cat_real = treecorr.Catalog(ra=ra_real, dec=dec_real, w=weight_real, ra_units=ra_units, dec_units=dec_units)
-	ww = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units)
-	ww.process(cat_real)
-
-	# Create catalog for the randoms
-	cat_rand = treecorr.Catalog(ra=ra_rand, dec=dec_rand, ra_units=ra_units, dec_units=dec_units)
-	rr = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units)
-	rr.process(cat_rand)
-
-	# Create their cross catalog
-	wr = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units)
-	wr.process(cat_real, cat_rand)
+	gals = Table([ra_real, dec_real], names=('ra', 'dec'))
+	rans = Table([ra_rand, dec_rand], names=('ra', 'dec'))	
 	
-	# Calculate 2pt correlation function of the total sample
-	weighted_omega, var_weightedomega = ww.calculateXi(rr=rr, dr=wr)
-	th = np.exp(ww.meanlogr)
+	par = gun.packpars(kind='acf', nsept=nbins, septmin=th_min, dsept=log_bin_width, logsept=True, estimator='LS', doboot=doboot) 
+	
+	gals['wei'] = 1.
+	rans['wei'] = 1.
 
-	return th, weighted_omega
+	result = gun.acf(gals, rans, par)
+	th = result['thm']
+	omega = result['wth']
+	
+	
+	if(doboot):
+		omegaerr = result['wtherr']
+		return th, omega, omegaerr
+	else:
+		return th, omega
+	
+def weightedOmegaTheta(ra_real, dec_real, weight_real, ra_rand, dec_rand, th_min=0.001, th_max=50.0, nbins=8, ra_units='deg', dec_units='deg', sep_units='degrees', doboot=True):
 
+	log_bin_width = (np.log10(th_max) - np.log10(th_min)) / (nbins)
+	
+	gals = Table([ra_real, dec_real], names=('ra', 'dec'))
+	rans = Table([ra_rand, dec_rand], names=('ra', 'dec'))
+	
+	par = gun.packpars(kind='acf', nsept=nbins, septmin=th_min, dsept=log_bin_width, logsept=True, estimator='LS', doboot=doboot) 
+	
+	gals['wei'] = weight_real/np.mean(weight_real) # gundam does not normalize the weight inside it. 
+	rans['wei'] = 1.
+	
+	result = gun.acf(gals, rans, par)
+	th = result['thm']
+	weighted_omega = result['wth']
+	
+	
+	if(doboot):
+		weightedomegaerr = result['wtherr']
+		return th, weighted_omega, weightedomegaerr
+	else:
+		return th, weighted_omega
+	
 def mcfTheta(th, omega_th, weighted_omega_th):
 	M_th = (1 + weighted_omega_th)/(1 + omega_th)
 	return M_th
 	
-def computeCF(real_tab, real_properties, rand_tab, thmin, thmax, th_nbins, realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec'):
+def computeCF(real_tab, real_properties, rand_tab, thmin, thmax, th_nbins, realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec', doboot=True):
+
+	
 
 	ra_real = real_tab[realracol]
 	dec_real = real_tab[realdeccol]
 
 	ra_rand = rand_tab[randracol]
 	dec_rand = rand_tab[randdeccol]
+	
+	d_th = (np.log10(thmax) - np.log10(thmin)) / th_nbins
 
 	th, omega = omegaTheta(ra_real, dec_real, ra_rand, dec_rand, th_min=thmin, th_max=thmax, nbins=th_nbins)
 	
@@ -85,9 +92,9 @@ def computeCF(real_tab, real_properties, rand_tab, thmin, thmax, th_nbins, realr
 		prop_now = np.array(real_tab[prop_i])
 		
 		prop_now_ranked = rankdata(prop_now)
-	
+		
 		th, weighted_omega_ranked = weightedOmegaTheta(ra_real, dec_real, prop_now_ranked, ra_rand, dec_rand, th_min=thmin, th_max=thmax, nbins=th_nbins)
-
+	
 		M_theta = np.array(mcfTheta(th, omega, weighted_omega_ranked)).reshape(len(th), 1)
 				
 		th_omega_mcfs = np.hstack((th_omega_mcfs, M_theta))
@@ -96,12 +103,14 @@ def computeCF(real_tab, real_properties, rand_tab, thmin, thmax, th_nbins, realr
 	
 
 	
-def runComputationAngular(real_tab, real_properties, rand_tab, thmin, thmax, th_nbins, njacks_ra, njacks_dec, working_dir=os.getcwd(), realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec', omp=False):
+def runComputationAngular(real_tab, real_properties, rand_tab, thmin, thmax, th_nbins, njacks_ra, njacks_dec, working_dir=os.getcwd(), realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec', omp=False, doboot=True):
 
 	os.chdir(working_dir)
 	os.mkdir('biproducts')
 	os.mkdir('results')
 	os.mkdir('results/jackknifes')
+	
+	
 	
 	def process_jackknife(jk_i):
 
@@ -124,7 +133,10 @@ def runComputationAngular(real_tab, real_properties, rand_tab, thmin, thmax, th_
 			
 		return 0
 	
-	n_jacks = njacks_ra * njacks_dec
+	if(doboot == True):
+		n_jacks = 0
+	else:	
+		n_jacks = njacks_ra * njacks_dec
 	
 	jackknife_samples = jkgen.makeJkSamples(real_tab, rand_tab, njacks_ra, njacks_dec, realracol, realdeccol, randracol, randdeccol, plot=False)
 	

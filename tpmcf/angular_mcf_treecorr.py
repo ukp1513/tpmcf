@@ -17,20 +17,20 @@ from . import jkgen
 
 logging.basicConfig(level=logging.INFO)
 
-def omegaTheta(ra_real, dec_real, ra_rand, dec_rand, th_min=0.001, th_max=50.0, nbins=8, ra_units='deg', dec_units='deg', sep_units='degrees'):
+def omegaTheta(ra_real, dec_real, ra_rand, dec_rand, th_min, th_max, nbins, bin_type='Log', ra_units='deg', dec_units='deg', sep_units='degrees'):
 
 	# Create catalog for the data
 	cat_real = treecorr.Catalog(ra=ra_real, dec=dec_real, ra_units=ra_units, dec_units=dec_units)
-	dd = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units)
+	dd = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, bin_type=bin_type, sep_units = sep_units)
 	dd.process(cat_real)
 
 	# Create catalog for the randoms
 	cat_rand = treecorr.Catalog(ra=ra_rand, dec=dec_rand, ra_units=ra_units, dec_units=dec_units)
-	rr = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units)
+	rr = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, bin_type=bin_type, sep_units = sep_units)
 	rr.process(cat_rand)
 
 	# Create their cross catalog
-	dr = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units)
+	dr = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, bin_type=bin_type, sep_units = sep_units)
 	dr.process(cat_real, cat_rand)
 	
 	# Calculate 2pt correlation function of the total sample
@@ -39,20 +39,20 @@ def omegaTheta(ra_real, dec_real, ra_rand, dec_rand, th_min=0.001, th_max=50.0, 
 
 	return th, omega
 	
-def weightedOmegaTheta(ra_real, dec_real, weight_real, ra_rand, dec_rand, th_min=0.001, th_max=50.0, nbins=8, ra_units='deg', dec_units='deg', sep_units='degrees'):
+def weightedOmegaTheta(ra_real, dec_real, weight_real, ra_rand, dec_rand, th_min, th_max, nbins, bin_type='Log', ra_units='deg', dec_units='deg', sep_units='degrees'):
 
 	# Create catalog for the data
 	cat_real = treecorr.Catalog(ra=ra_real, dec=dec_real, w=weight_real, ra_units=ra_units, dec_units=dec_units)
-	ww = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units)
+	ww = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, bin_type=bin_type, sep_units = sep_units)
 	ww.process(cat_real)
 
 	# Create catalog for the randoms
 	cat_rand = treecorr.Catalog(ra=ra_rand, dec=dec_rand, ra_units=ra_units, dec_units=dec_units)
-	rr = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units)
+	rr = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, bin_type=bin_type, sep_units = sep_units)
 	rr.process(cat_rand)
 
 	# Create their cross catalog
-	wr = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units)
+	wr = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, bin_type=bin_type, sep_units = sep_units)
 	wr.process(cat_real, cat_rand)
 	
 	# Calculate 2pt correlation function of the total sample
@@ -73,7 +73,7 @@ def computeCF(real_tab, real_properties, rand_tab, thmin, thmax, th_nbins, realr
 	ra_rand = rand_tab[randracol]
 	dec_rand = rand_tab[randdeccol]
 
-	th, omega = omegaTheta(ra_real, dec_real, ra_rand, dec_rand, th_min=thmin, th_max=thmax, nbins=th_nbins)
+	th, omega = omegaTheta(ra_real, dec_real, ra_rand, dec_rand, thmin, thmax, th_nbins)
 	
 	th_omega_mcfs = np.empty((len(th), 0))
 	
@@ -86,8 +86,8 @@ def computeCF(real_tab, real_properties, rand_tab, thmin, thmax, th_nbins, realr
 		
 		prop_now_ranked = rankdata(prop_now)
 	
-		th, weighted_omega_ranked = weightedOmegaTheta(ra_real, dec_real, prop_now_ranked, ra_rand, dec_rand, th_min=thmin, th_max=thmax, nbins=th_nbins)
-
+		th, weighted_omega_ranked = weightedOmegaTheta(ra_real, dec_real, prop_now_ranked, ra_rand, dec_rand, thmin, thmax, th_nbins)
+		
 		M_theta = np.array(mcfTheta(th, omega, weighted_omega_ranked)).reshape(len(th), 1)
 				
 		th_omega_mcfs = np.hstack((th_omega_mcfs, M_theta))
@@ -109,11 +109,11 @@ def runComputationAngular(real_tab, real_properties, rand_tab, thmin, thmax, th_
 			if(jk_i == 0):
 				real_tab_i, rand_tab_i = real_tab, rand_tab 
 				result_file = 'results/CFReal.txt'
-				print("Working on the real sample")
+				print("Working on the real sample: Nreal = %d, Nrand = %d" %(len(real_tab_i), len(rand_tab_i)))
 			else:
 				real_tab_i, rand_tab_i = jackknife_samples[jk_i - 1]
 				result_file = 'results/jackknifes/CFJackknife_jk%d.txt' %jk_i
-				print("Working on the jackknife sample %d" %jk_i)
+				print("Working on the jackknife sample %d: Nreal = %d, Nrand = %d" %(jk_i, len(real_tab_i), len(rand_tab_i)))
 			
 			result_i = computeCF(real_tab_i, real_properties, rand_tab_i, thmin, thmax, th_nbins, realracol, realdeccol, randracol, randdeccol)
 			

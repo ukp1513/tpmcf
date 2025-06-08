@@ -13,57 +13,63 @@ from astropy.coordinates import SkyCoord
 import os
 from concurrent.futures import ProcessPoolExecutor
 import logging
-from . import jkgen
 
 logging.basicConfig(level=logging.INFO)
 
-def omegaTheta(ra_real, dec_real, ra_rand, dec_rand, th_min=0.001, th_max=50.0, nbins=8, ra_units='deg', dec_units='deg', sep_units='degrees'):
+def omegaTheta(ra_real, dec_real, ra_rand, dec_rand, th_min=0.001, th_max=50.0, nbins=8, ra_units='deg', dec_units='deg', sep_units='degrees', njk=30):
 
 	# Create catalog for the data
-	cat_real = treecorr.Catalog(ra=ra_real, dec=dec_real, ra_units=ra_units, dec_units=dec_units)
-	dd = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units)
+	cat_real = treecorr.Catalog(ra=ra_real, dec=dec_real, ra_units=ra_units, dec_units=dec_units, npatch=njk)
+	dd = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units, var_method='jackknife')
 	dd.process(cat_real)
 
 	# Create catalog for the randoms
-	cat_rand = treecorr.Catalog(ra=ra_rand, dec=dec_rand, ra_units=ra_units, dec_units=dec_units)
-	rr = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units)
+	cat_rand = treecorr.Catalog(ra=ra_rand, dec=dec_rand, ra_units=ra_units, dec_units=dec_units, npatch=njk)
+	rr = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units, var_method='jackknife')
 	rr.process(cat_rand)
 
 	# Create their cross catalog
-	dr = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units)
+	dr = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units, var_method='jackknife')
 	dr.process(cat_real, cat_rand)
 	
 	# Calculate 2pt correlation function of the total sample
-	omega, varomega = dd.calculateXi(rr=rr, dr=dr)
+	omega, omega_var = dd.calculateXi(rr=rr, dr=dr)
 	th = np.exp(dd.meanlogr)
+	omega_cov = dd.cov
 
-	return th, omega
+	return th, omega, omega_cov 
 	
-def weightedOmegaTheta(ra_real, dec_real, weight_real, ra_rand, dec_rand, th_min=0.001, th_max=50.0, nbins=8, ra_units='deg', dec_units='deg', sep_units='degrees'):
+def weightedOmegaTheta(ra_real, dec_real, weight_real, ra_rand, dec_rand, th_min=0.001, th_max=50.0, nbins=8, ra_units='deg', dec_units='deg', sep_units='degrees', njk=30):
 
 	# Create catalog for the data
-	cat_real = treecorr.Catalog(ra=ra_real, dec=dec_real, w=weight_real, ra_units=ra_units, dec_units=dec_units)
-	ww = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units)
+	cat_real = treecorr.Catalog(ra=ra_real, dec=dec_real, w=weight_real, ra_units=ra_units, dec_units=dec_units, npatch=njk)
+	ww = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units, var_method='jackknife')
 	ww.process(cat_real)
 
 	# Create catalog for the randoms
-	cat_rand = treecorr.Catalog(ra=ra_rand, dec=dec_rand, ra_units=ra_units, dec_units=dec_units)
-	rr = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units)
+	cat_rand = treecorr.Catalog(ra=ra_rand, dec=dec_rand, ra_units=ra_units, dec_units=dec_units, npatch=njk)
+	rr = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units, var_method='jackknife')
 	rr.process(cat_rand)
 
 	# Create their cross catalog
-	wr = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units)
+	wr = treecorr.NNCorrelation(min_sep=th_min, max_sep=th_max, nbins=nbins, sep_units = sep_units, var_method='jackknife')
 	wr.process(cat_real, cat_rand)
 	
 	# Calculate 2pt correlation function of the total sample
-	weighted_omega, var_weightedomega = ww.calculateXi(rr=rr, dr=wr)
+	weighted_omega, weightedomega_var = ww.calculateXi(rr=rr, dr=wr)
 	th = np.exp(ww.meanlogr)
+	weightedomega_cov = ww.cov
 
-	return th, weighted_omega
+	return th, weighted_omega, weightedomega_cov
 
-def mcfTheta(th, omega_th, weighted_omega_th):
-	M_th = (1 + weighted_omega_th)/(1 + omega_th)
-	return M_th
+def mcfTheta(th, omega_th, weighted_omega_th, omega_th_err, weighted_omega_th_err):
+	A = 1 + weighted_omega_th
+	B = 1 + omega_th
+	M_th = A / B
+
+	M_th_err = M_th * np.sqrt((weighted_omega_th_err / A)**2 + (omega_th_err / B)**2)
+
+	return M_th, M_th_err
 	
 def computeCF(real_tab, real_properties, rand_tab, thmin, thmax, th_nbins, realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec'):
 
@@ -73,7 +79,7 @@ def computeCF(real_tab, real_properties, rand_tab, thmin, thmax, th_nbins, realr
 	ra_rand = rand_tab[randracol]
 	dec_rand = rand_tab[randdeccol]
 
-	th, omega = omegaTheta(ra_real, dec_real, ra_rand, dec_rand, th_min=thmin, th_max=thmax, nbins=th_nbins)
+	th, omega, omega_cov = omegaTheta(ra_real, dec_real, ra_rand, dec_rand, th_min=thmin, th_max=thmax, nbins=th_nbins)
 	
 	th_omega_mcfs = np.empty((len(th), 0))
 	
@@ -100,7 +106,7 @@ def runComputationAngular(real_tab, real_properties, rand_tab, thmin, thmax, th_
 
 	os.chdir(working_dir)
 	os.mkdir('biproducts')
-	os.mkdir('results')
+	os.mkdir('finals')
 	os.mkdir('results/jackknifes')
 	
 	def process_jackknife(jk_i):
