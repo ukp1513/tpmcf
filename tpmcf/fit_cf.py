@@ -227,6 +227,10 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab=None
 
 
 	np.savetxt(dir_name+os.path.sep+'results/CFRealAll_filtered_tofit.txt', CFRealAll_tofit,delimiter='\t',fmt='%f')
+	
+	if len(CFRealAll_tofit) == 0:
+	    print("There are no bins with reliable CF within the fitting range")
+	    return 0
 
 
 

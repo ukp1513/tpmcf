@@ -12,28 +12,24 @@ from matplotlib.ticker import FormatStrFormatter
 from matplotlib import font_manager as fm, rcParams
 import socket
 
-if(os.environ['THIS_PLATFORM'] == 'hp455'):
-	fpath = "/home/krishna/Dropbox/fonts/cmunss.ttf"
-	source_dir = '/home/krishna/krishna_work/DES_MCF'
-elif(os.environ['THIS_PLATFORM'] == 'hippo'):
-	fpath = "/home/ukp1513/fonts/cmunss.ttf"
-	source_dir = "/data/ukp1513/des_mcf/"
-elif(os.environ['THIS_PLATFORM'] == 'plgrid'):
-	fpath = '/net/people/plgrid/plgukp1513/fonts/cmunss.ttf'
-	source_dir = '/net/ascratch/people/plgukp1513/des_mcf/data'
-elif(os.environ['THIS_PLATFORM'] == 'chpc'):
-	fpath = '/home/usureshkumar/fonts/cmunss.ttf'
-	source_dir = '/home/usureshkumar/lustre/des'
-else:
-        print("Platform not found! Exiting...")
-        exit(0)
+#if(os.environ['THIS_PLATFORM'] == 'hp455'):
+#	fpath = "/home/krishna/Dropbox/fonts/cmunss.ttf"
+#elif(os.environ['THIS_PLATFORM'] == 'hippo'):
+#	fpath = "/home/ukp1513/fonts/cmunss.ttf"
+#elif(os.environ['THIS_PLATFORM'] == 'plgrid'):
+#	fpath = '/net/people/plgrid/plgukp1513/fonts/cmunss.ttf'
+#elif(os.environ['THIS_PLATFORM'] == 'chpc'):
+#	fpath = '/home/usureshkumar/fonts/cmunss.ttf'
+#else:
+#    print("Platform not found! Exiting...")
+#    exit(0)
 
 	
-prop = fm.FontProperties(fname=fpath,size=12,math_fontfamily='stixsans')
-prop_big = fm.FontProperties(fname=fpath,size=14,math_fontfamily='stixsans')
-prop_small = fm.FontProperties(fname=fpath,size=12,math_fontfamily='stixsans')
-prop_tiny = fm.FontProperties(fname=fpath,size=7,math_fontfamily='stixsans')
-fname = os.path.split(fpath)[1]
+#prop = fm.FontProperties(fname=fpath,size=12,math_fontfamily='stixsans')
+#prop_big = fm.FontProperties(fname=fpath,size=14,math_fontfamily='stixsans')
+#prop_small = fm.FontProperties(fname=fpath,size=12,math_fontfamily='stixsans')
+#prop_tiny = fm.FontProperties(fname=fpath,size=7,math_fontfamily='stixsans')
+#fname = os.path.split(fpath)[1]
 
 plt.style.use('classic')
 
@@ -231,6 +227,10 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab=None
 
 
 	np.savetxt(dir_name+os.path.sep+'results/CFRealAll_filtered_tofit.txt', CFRealAll_tofit,delimiter='\t',fmt='%f')
+	
+	if len(CFRealAll_tofit) == 0:
+	    print("There are no bins with reliable CF within the fitting range")
+	    return 0
 
 
 
@@ -458,9 +458,9 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab=None
 
 	plt.xscale(plotxscale)
 	plt.yscale(plotyscale)
-	plt.xlabel(cfxlabel,labelpad=10, fontproperties=prop_big)
-	plt.ylabel(cfylabel,labelpad=0.5, fontproperties=prop_big)
-	plt.legend(prop=prop)
+	plt.xlabel(cfxlabel,labelpad=10)#, fontproperties=prop_big)
+	plt.ylabel(cfylabel,labelpad=0.5)#, fontproperties=prop_big)
+	plt.legend()#prop=prop)
 	plt.savefig(cffig_name , dpi=300, bbox_inches = 'tight')
 	plt.close()
 
@@ -500,11 +500,11 @@ def fitCFMcf(stattype, sepmin, sepmax, sepmin_tofit, sepmax_tofit, real_tab=None
 			ax_now.axhline(y=1, color='black', linestyle='dashed')
 
 		plt.xscale(plotxscale)
-		plt.xlabel(mcfxlabel,labelpad=10, fontproperties=prop_big)
-		plt.ylabel(mcfylabel,labelpad=0.5, fontproperties=prop_big)
+		plt.xlabel(mcfxlabel,labelpad=10)#, fontproperties=prop_big)
+		plt.ylabel(mcfylabel,labelpad=0.5)#, fontproperties=prop_big)
 		ax_now.xaxis.set_major_formatter(FormatStrFormatter('%g'))
 		ax_now.yaxis.set_major_formatter(FormatStrFormatter('%g'))
-		plt.legend(numpoints=1,frameon=False,loc=0,prop=prop_tiny)
+		plt.legend(numpoints=1,frameon=False,loc=0)#,prop=prop_tiny)
 			
 		plt.grid(False)
 		plt.subplots_adjust(hspace=0.0,wspace=0.2)

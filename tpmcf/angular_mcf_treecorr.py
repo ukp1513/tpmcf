@@ -109,11 +109,11 @@ def runComputationAngular(real_tab, real_properties, rand_tab, thmin, thmax, th_
 			if(jk_i == 0):
 				real_tab_i, rand_tab_i = real_tab, rand_tab 
 				result_file = 'results/CFReal.txt'
-				print("Working on the real sample")
+				print("Working on the real sample: Nreal = %d, Nrand = %d" %(len(real_tab_i), len(rand_tab_i)))
 			else:
 				real_tab_i, rand_tab_i = jackknife_samples[jk_i - 1]
 				result_file = 'results/jackknifes/CFJackknife_jk%d.txt' %jk_i
-				print("Working on the jackknife sample %d" %jk_i)
+				print("Working on the jackknife sample %d: Nreal = %d, Nrand = %d" %(jk_i, len(real_tab_i), len(rand_tab_i)))
 			
 			result_i = computeCF(real_tab_i, real_properties, rand_tab_i, thmin, thmax, th_nbins, realracol, realdeccol, randracol, randdeccol)
 			
