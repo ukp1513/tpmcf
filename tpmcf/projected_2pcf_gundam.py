@@ -1,20 +1,11 @@
 import numpy as np 
-import matplotlib.pyplot as plt
-from matplotlib import rcParams
-from scipy.stats import rankdata
 from astropy.table import Table
 from astropy.cosmology import FlatLambdaCDM
-import time
-import treecorr
-import healpy as hp
-from astropy.io import fits
-from astropy import units as u
-from astropy.coordinates import SkyCoord
 import os
-from concurrent.futures import ProcessPoolExecutor
 import logging
 from . import jkgen
 import gundam as gun
+from multiprocessing import Pool, cpu_count
 
 logging.basicConfig(level=logging.INFO)
 
@@ -82,50 +73,73 @@ def computeCF(real_tab, rand_tab, rpmin, rpmax, rp_nbins, pimin, pimax, realraco
 	
 	return rp_omegas
 	
+def _process_jackknife(args):
+
+    jk_i, real_tab_arg, rand_tab_arg, rpmin_arg, rpmax_arg, rp_nbins_arg, pimin_arg, pimax_arg, realracol_arg, realdeccol_arg, realzcol_arg, randracol_arg, randdeccol_arg, randzcol_arg, cosmology_H0_Om0_arg, jackknife_samples_arg, working_dir = args
+
+    try:
+        if(jk_i == 0):
+            real_tab_i, rand_tab_i = real_tab_arg, rand_tab_arg 
+            result_file = os.path.join(working_dir, 'results', 'CFReal.txt')
+            print("Working on the real sample: Nreal = %d, Nrand = %d" %(len(real_tab_i), len(rand_tab_i)))
+
+        else:
+            real_tab_i, rand_tab_i = jackknife_samples_arg[jk_i - 1]
+            result_file = os.path.join(working_dir, 'results', 'jackknifes', 'CFJackknife_jk%d.txt' %jk_i)
+            print("Working on the jackknife sample %d: Nreal = %d, Nrand = %d" %(jk_i, len(real_tab_i), len(rand_tab_i)))
+
+        result_i = computeCF(real_tab_i, rand_tab_i, rpmin_arg, rpmax_arg, rp_nbins_arg, pimin_arg, pimax_arg, realracol_arg, realdeccol_arg, realzcol_arg, randracol_arg, randdeccol_arg, randzcol_arg, cosmology_H0_Om0_arg)
+
+        np.savetxt(result_file, result_i, delimiter="\t",fmt='%f')
+
+    except Exception as e:
+        logging.error("Error processing jk_i = %d: %s", jk_i, e)
+        return 1
+
+    return 0
+	
+	
 def runComputationProjected(real_tab, rand_tab, rpmin, rpmax, rp_nbins, pimin, pimax, njacks_ra, njacks_dec, working_dir=os.getcwd(), realracol='RA',realdeccol='DEC', realzcol='z', randracol='RA', randdeccol='Dec', randzcol='z', omp=False, cosmology_H0_Om0=[70.0, 0.3]):
 
-	
-	
-	os.chdir(working_dir)
-	os.mkdir('biproducts')
-	os.mkdir('results')
-	os.mkdir('results/jackknifes')
-	
-	def process_jackknife(jk_i):
+    original_working_dir = os.getcwd()
 
-		try:
-			if(jk_i == 0):
-				real_tab_i, rand_tab_i = real_tab, rand_tab 
-				result_file = 'results/CFReal.txt'
-				print("Working on the real sample (Nreal = %d, Nrandom = %d)" %(len(real_tab_i), len(rand_tab_i)))
-			else:
-				real_tab_i, rand_tab_i = jackknife_samples[jk_i - 1]
-				result_file = 'results/jackknifes/CFJackknife_jk%d.txt' %jk_i
-				print("Working on the jackknife sample %d (Nreal = %d, Nrandom = %d)" %(jk_i, len(real_tab_i), len(rand_tab_i)))
-			
-	
-			result_i = computeCF(real_tab_i, rand_tab_i, rpmin, rpmax, rp_nbins, pimin, pimax, realracol, realdeccol, realzcol, randracol, randdeccol, randzcol, cosmology_H0_Om0)
-			
-			np.savetxt(result_file, result_i, delimiter="\t",fmt='%f')
-			
-		except Exception as e:
-			logging.error("Error processing jk_i = %d: %s", jk_i, e)
-			return 1
-			
-		return 0
-	
-	n_jacks = njacks_ra * njacks_dec
-	
-	jackknife_samples = jkgen.makeJkSamples(real_tab, rand_tab, njacks_ra, njacks_dec, realracol, realdeccol, randracol, randdeccol, plot=False)
-	
-	if(omp): #TODO: not working...
-		logging.info("Parallel programming with %d workers...", os.cpu_count())
-		with ProcessPoolExecutor() as executor:
-			executor.map(process_jackknife, range(n_jacks + 1))
-	else:
-		for jk_i in range(n_jacks+1):
-			process_outcome = process_jackknife(jk_i)
-	
-	return process_outcome
+    os.chdir(working_dir)
+    os.makedirs(working_dir+os.path.sep+'biproducts',  exist_ok=True)
+    os.makedirs(working_dir+os.path.sep+'results/jackknifes',  exist_ok=True)
+
+    jackknife_samples = jkgen.makeJkSamples(real_tab, rand_tab, njacks_ra, njacks_dec, realracol, realdeccol, randracol, randdeccol, plot=False)
+
+    n_jacks = njacks_ra * njacks_dec
+    
+    process_outcomes = []
+
+    if(omp): 
+        num_processes = cpu_count()
+        print(f"Parallelizing with {num_processes} processes...")
+        tasks = []
+        for jk_i in range(n_jacks + 1):
+            tasks.append((jk_i, real_tab, rand_tab, rpmin, rpmax, rp_nbins, pimin, pimax, realracol, realdeccol, realzcol, randracol, randdeccol, randzcol, cosmology_H0_Om0, jackknife_samples, working_dir))
+            
+        with Pool(processes=num_processes) as pool:
+            process_outcomes = pool.map(_process_jackknife, tasks)
+            
+    else:
+        for jk_i in range(n_jacks + 1):
+            args = (jk_i, real_tab, rand_tab, rpmin, rpmax, rp_nbins, pimin, pimax, realracol, realdeccol, realzcol, randracol, randdeccol, randzcol, cosmology_H0_Om0, jackknife_samples, working_dir)
+            outcome = _process_jackknife(args)
+            process_outcomes.append(outcome)
+            
+    os.chdir(original_working_dir)
+            
+    if any(outcome != 0 for outcome in process_outcomes):
+        print("Warning: Some jackknife computations failed.")
+        return 1
+    else:
+        print("All computations completed successfully.")
+        return 0
+        
+        
+        
+    
 	
 

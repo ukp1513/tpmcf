@@ -11,7 +11,6 @@ from astropy.io import fits
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 import os
-from concurrent.futures import ProcessPoolExecutor
 import logging
 from . import jkgen
 
@@ -70,12 +69,12 @@ def _process_jackknife(args):
         if jk_i == 0:
             real_tab_i_1, rand_tab_i_1 = real_tab1_arg, rand_tab1_arg
             real_tab_i_2, rand_tab_i_2 = real_tab2_arg, rand_tab2_arg
-            result_file = working_dir+os.path.sep+'results/CFReal.txt'
+            result_file = os.path.join(working_dir, 'results', 'CFReal.txt')
             print("Working on the real sample")
         else:
             real_tab_i_1, rand_tab_i_1 = jackknife_samples_1_arg[jk_i - 1]
             real_tab_i_2, rand_tab_i_2 = jackknife_samples_2_arg[jk_i - 1]
-            result_file = working_dir+os.path.sep+'results/jackknifes/CFJackknife_jk%d.txt' %jk_i
+            result_file = os.path.join(working_dir,'results','jackknifes','CFJackknife_jk%d.txt' %jk_i)
             print("Working on the jackknife sample %d" %jk_i)
 			
         result_i = computeCF_cross(real_tab_i_1, real_tab_i_2, rand_tab_i_1, rand_tab_i_2, thmin_arg, thmax_arg, th_nbins_arg, realracol_arg, realdeccol_arg, randracol_arg, randdeccol_arg)
@@ -90,7 +89,7 @@ def _process_jackknife(args):
 	
 def runComputationAngular_cross(real_tab1, real_tab2, rand_tab1, rand_tab2, thmin, thmax, th_nbins, njacks_ra, njacks_dec, working_dir=os.getcwd(), realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec', omp=False):
 
-    #os.chdir(working_dir)
+    os.chdir(working_dir)
     os.makedirs(working_dir+os.path.sep+'biproducts',  exist_ok=True)
     os.makedirs(working_dir+os.path.sep+'results/jackknifes',  exist_ok=True)
 
