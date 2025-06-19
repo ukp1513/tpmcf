@@ -91,8 +91,8 @@ def _process_jackknife(args):
 def runComputationAngular_cross(real_tab1, real_tab2, rand_tab1, rand_tab2, thmin, thmax, th_nbins, njacks_ra, njacks_dec, working_dir=os.getcwd(), realracol='RA',realdeccol='DEC',randracol='RA', randdeccol='Dec', omp=False):
 
     #os.chdir(working_dir)
-    os.mkdirs(working_dir+os.path.sep+'biproducts',  exist_ok=True)
-    os.mkdirs(working_dir+os.path.sep+'results/jackknifes',  exist_ok=True)
+    os.makedirs(working_dir+os.path.sep+'biproducts',  exist_ok=True)
+    os.makedirs(working_dir+os.path.sep+'results/jackknifes',  exist_ok=True)
 
     jackknife_samples_1 = jkgen.makeJkSamples(real_tab1, rand_tab1, njacks_ra, njacks_dec, realracol, realdeccol, randracol, randdeccol, plot=False)
     jackknife_samples_2 = jkgen.makeJkSamples(real_tab2, rand_tab2, njacks_ra, njacks_dec, realracol, realdeccol, randracol, randdeccol, plot=False)
